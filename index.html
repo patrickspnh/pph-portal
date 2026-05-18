@@ -328,6 +328,7 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
         <div class="hist-title">My Log</div>
         <div class="week-chip" id="weekChip">0h this week</div>
       </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px;font-family:'DM Mono',monospace;">Showing last 30 days</div>
       <div id="entryList"></div>
     </div>
 
@@ -344,35 +345,42 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
         </div>
       </div>
 
-      <div class="jobs-manage">
-        <div class="s-title">Manage Jobs</div>
-        <div class="s-desc">Add or remove jobs from the dropdown.</div>
+      <div class="divider"></div>
+
+      <div class="s-title">About This App</div>
+      <div class="s-desc">Patrick's Plumbing and Heating — Employee Portal<br>Version 3.0</div>
+
+      <div class="divider"></div>
+
+      <!-- Admin section — hidden behind PIN -->
+      <div id="adminSection" style="display:none;">
+        <div class="s-title">Admin — Manage Jobs</div>
+        <div class="s-desc">Add or remove jobs from the employee dropdown.</div>
         <div id="jobListEl"></div>
         <div class="add-job-row">
           <input id="newJobInput" type="text" placeholder="New job or address…">
           <button class="btn-add-job" onclick="addJob()">+ Add</button>
         </div>
-      </div>
-
-      <div class="divider"></div>
-
-      <div class="s-title">Connect Google Sheets</div>
-      <div class="s-desc">Paste your Apps Script Web App URL to sync entries to your sheet.</div>
-      <div class="step">
-        <div class="step-num">Your Web App URL</div>
-        <div class="step-body">
-          Paste the URL from your Google Apps Script deployment.
-          <div class="url-row">
-            <input id="sheetUrl" type="url" placeholder="https://script.google.com/macros/s/…">
-            <button class="btn-save" onclick="saveUrl()">Save</button>
+        <div class="divider"></div>
+        <div class="s-title">Web App URL</div>
+        <div class="step">
+          <div class="step-body">
+            <div class="url-row">
+              <input id="sheetUrl" type="url" placeholder="https://script.google.com/macros/s/…">
+              <button class="btn-save" onclick="saveUrl()">Save</button>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="divider"></div>
+      <!-- Admin unlock -->
+      <div id="adminUnlock">
+        <div class="add-job-row" style="margin-top:0;">
+          <input id="adminPin" type="password" placeholder="Admin PIN…">
+          <button class="btn-add-job" onclick="checkAdminPin()">Admin</button>
+        </div>
+      </div>
 
-      <div class="s-title">About This App</div>
-      <div class="s-desc">Patrick's Plumbing and Heating — Employee Portal<br>Version 3.0</div>
     </div>
   </main>
 
@@ -488,7 +496,7 @@ function showTab(name) {
     document.getElementById('view-' + n).classList.toggle('active', n === name);
     document.getElementById('nav-' + n).classList.toggle('active', n === name);
   });
-  if (name === 'history') renderHistory();
+  if (name === 'history') { renderHistory(); fetchHistoryFromSheet(); }
   if (name === 'announcements') { markAnnouncementsRead(); renderAnnouncements(); }
 }
 
@@ -665,6 +673,40 @@ function setBusy(on) {
 }
 
 // ─── HISTORY ─────────────────────────────────────────────────────────
+async function fetchHistoryFromSheet() {
+  if (!sheetUrl || !empName) return;
+  try {
+    const url = sheetUrl + '?action=getEmployeeHistory&employee=' + encodeURIComponent(empName);
+    const res  = await fetch(url);
+    const data = await res.json();
+    if (data && data.entries && data.entries.length) {
+      // Merge sheet entries with local entries, avoiding duplicates
+      const sheetEntries = data.entries.map(e => ({
+        id:      e.id || (e.date + e.job).hashCode || Date.now(),
+        emp:     e.employee,
+        job:     e.job,
+        date:    e.date,
+        hrs:     parseFloat(e.hours) || 0,
+        notes:   e.notes || '',
+        payType: e.payType || 'standard',
+        synced:  true
+      }));
+      // Merge — keep local entries too, avoid duplicates by date+job+hrs
+      const keys = new Set(entries.map(e => e.date + '|' + e.job + '|' + e.hrs));
+      sheetEntries.forEach(e => {
+        if (!keys.has(e.date + '|' + e.job + '|' + e.hrs)) {
+          entries.push(e);
+          keys.add(e.date + '|' + e.job + '|' + e.hrs);
+        }
+      });
+      // Sort by date descending
+      entries.sort((a,b) => new Date(b.date) - new Date(a.date));
+      save();
+      renderHistory();
+    }
+  } catch(e) { /* silent — offline or sheet not connected */ }
+}
+
 function renderHistory() {
   const list = document.getElementById('entryList');
   const chip = document.getElementById('weekChip');
@@ -894,7 +936,20 @@ async function requestNotifPermission() {
   }
 }
 
-// ─── SETTINGS ────────────────────────────────────────────────────────
+// ─── ADMIN PIN ────────────────────────────────────────────────────────
+const ADMIN_PIN = '1234'; // Change this to your preferred PIN
+function checkAdminPin() {
+  const pin = document.getElementById('adminPin').value;
+  if (pin === ADMIN_PIN) {
+    document.getElementById('adminSection').style.display = 'block';
+    document.getElementById('adminUnlock').style.display = 'none';
+    renderJobManager();
+    toast('Admin mode unlocked', 'ok');
+  } else {
+    toast('Incorrect PIN', 'err');
+    document.getElementById('adminPin').value = '';
+  }
+}
 function saveUrl() {
   const v = document.getElementById('sheetUrl').value.trim();
   if (!v.startsWith('https://script.google.com')) return toast('Please paste a valid Apps Script URL', 'err');
