@@ -794,6 +794,14 @@ function setBusy(on) {
 }
 
 // ─── HISTORY ─────────────────────────────────────────────────────────
+let deletedKeys = new Set(JSON.parse(localStorage.getItem('pph_deleted') || '[]'));
+
+function saveDeletedKeys() {
+  // Keep last 200 deleted keys to avoid unbounded growth
+  const arr = [...deletedKeys].slice(-200);
+  localStorage.setItem('pph_deleted', JSON.stringify(arr));
+}
+
 async function fetchHistoryFromSheet() {
   if (!sheetUrl || !empName) return;
   try {
@@ -801,31 +809,34 @@ async function fetchHistoryFromSheet() {
     const res  = await fetch(url);
     const data = await res.json();
     if (data && data.entries && data.entries.length) {
-      // Merge sheet entries with local entries, avoiding duplicates
       const sheetEntries = data.entries.map(e => ({
-        id:      e.id || (e.date + e.job).hashCode || Date.now(),
+        id:      e.id || (e.date + '|' + e.job + '|' + e.hours),
         emp:     e.employee,
         job:     e.job,
         date:    e.date,
         hrs:     parseFloat(e.hours) || 0,
-        notes:   e.notes || '',
+        notes:   e.notes   || '',
         payType: e.payType || 'standard',
+        workType:e.workType|| '',
         synced:  true
       }));
-      // Merge — keep local entries too, avoid duplicates by date+job+hrs
-      const keys = new Set(entries.map(e => e.date + '|' + e.job + '|' + e.hrs));
+
+      // Build key for dedup — date|job|hrs
+      const localKeys = new Set(entries.map(e => e.date + '|' + e.job + '|' + e.hrs));
+
       sheetEntries.forEach(e => {
-        if (!keys.has(e.date + '|' + e.job + '|' + e.hrs)) {
-          entries.push(e);
-          keys.add(e.date + '|' + e.job + '|' + e.hrs);
-        }
+        const key = e.date + '|' + e.job + '|' + e.hrs;
+        // Skip if already in local list OR if employee deleted it
+        if (localKeys.has(key) || deletedKeys.has(key)) return;
+        entries.push(e);
+        localKeys.add(key);
       });
-      // Sort by date descending
+
       entries.sort((a,b) => new Date(b.date) - new Date(a.date));
       save();
       renderHistory();
     }
-  } catch(e) { /* silent — offline or sheet not connected */ }
+  } catch(e) { /* silent */ }
 }
 
 function renderHistory() {
@@ -855,11 +866,19 @@ function renderHistory() {
 }
 function del(id) {
   const entry = entries.find(e => e.id === id);
-  const el    = document.getElementById('e' + id);
+  if (!entry) return;
+
+  // Record this key so fetchHistoryFromSheet won't re-add it
+  const key = entry.date + '|' + entry.job + '|' + entry.hrs;
+  deletedKeys.add(key);
+  saveDeletedKeys();
+
+  // Animate out
+  const el = document.getElementById('e' + id);
   if (el) { el.style.opacity = '0'; el.style.transform = 'translateX(20px)'; }
 
   // Delete from sheet if it was synced
-  if (entry && entry.synced && sheetUrl && empName) {
+  if (entry.synced && sheetUrl && empName) {
     fetch(sheetUrl, {
       method: 'POST', mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
