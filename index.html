@@ -38,8 +38,8 @@ body { background: var(--navy-deep); color: var(--text); font-family: 'Source Sa
 .glow { position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 500px; height: 280px; background: radial-gradient(ellipse at 50% -10%, rgba(30,58,110,0.9) 0%, transparent 70%); pointer-events: none; z-index: 0; }
 
 /* HEADER */
-header { position: relative; z-index: 10; padding: 48px 24px 0; display: flex; flex-direction: column; align-items: center; text-align: center; }
-.logo-img { width: 190px; height: auto; margin-bottom: 8px; filter: drop-shadow(0 4px 16px rgba(0,0,0,0.4)); }
+header { position: relative; z-index: 10; padding: 48px 24px 8px; display: flex; flex-direction: column; align-items: center; text-align: center; overflow: visible; }
+.logo-img { width: 200px; height: auto; margin-bottom: 10px; display: block; padding-bottom: 6px; }
 .logo-tagline { font-size: 10px; color: var(--muted); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 14px; }
 .conn-pill { position: absolute; top: 48px; right: 16px; display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 6px 10px; border-radius: 100px; border: 1px solid var(--border-soft); color: var(--muted); background: var(--navy-mid); cursor: pointer; transition: all 0.3s; }
 .conn-pill .pip { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); transition: all 0.3s; }
@@ -91,26 +91,33 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 .job-tag.recent { border-color: rgba(79,163,224,0.3); color: rgba(79,163,224,0.9); }
 
 /* ── HOURS SLIDER ── */
-.hours-slider-wrap { margin-top: 8px; }
+.hours-slider-wrap { margin-top: 4px; }
 .hours-slider {
   -webkit-appearance: none; appearance: none;
-  width: 100%; height: 6px; border-radius: 3px;
+  width: 100%; height: 10px; border-radius: 5px;
   background: var(--border-soft);
   outline: none; cursor: pointer;
+  border: 1px solid var(--border);
 }
 .hours-slider::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
-  width: 28px; height: 28px; border-radius: 50%;
+  width: 34px; height: 34px; border-radius: 50%;
   background: var(--accent); cursor: pointer;
-  box-shadow: 0 2px 8px rgba(79,163,224,0.4);
-  border: 3px solid var(--navy-dark);
+  box-shadow: 0 0 0 4px rgba(79,163,224,0.2), 0 3px 10px rgba(79,163,224,0.5);
+  border: 3px solid white;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.hours-slider:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 6px rgba(79,163,224,0.25), 0 4px 14px rgba(79,163,224,0.6);
 }
 .hours-slider::-moz-range-thumb {
-  width: 28px; height: 28px; border-radius: 50%;
+  width: 34px; height: 34px; border-radius: 50%;
   background: var(--accent); cursor: pointer;
-  border: 3px solid var(--navy-dark);
+  box-shadow: 0 0 0 4px rgba(79,163,224,0.2);
+  border: 3px solid white;
 }
-.slider-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: 4px; padding: 0 2px; }
+
 
 /* PAY TYPE */
 .pay-type-display { display: flex; align-items: center; gap: 12px; background: var(--navy-dark); border: 1px solid var(--border-soft); border-radius: 10px; padding: 11px 14px; }
@@ -280,20 +287,15 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
         <div class="card">
           <div class="card-title"><span>🔧</span> Job / Project</div>
 
-          <!-- Job dropdown -->
+          <!-- Job dropdown only -->
           <div class="field">
             <label for="jobSelect">Select a Job</label>
             <select id="jobSelect" onchange="onJobSelectChange()">
               <option value="" disabled selected>— Select a job —</option>
             </select>
           </div>
-          <div class="custom-job-wrap" id="customJobWrap">
-            <label for="customJob">Type Job Name</label>
-            <input id="customJob" type="text" placeholder="e.g. 123 Main St — Boiler Repair">
-          </div>
-          <div id="recentChips" class="job-tag-row"></div>
 
-          <!-- Work type only -->
+          <!-- Work type -->
           <div class="field" style="margin-top:10px;">
             <label for="workType">Work Type</label>
             <select id="workType">
@@ -303,6 +305,7 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
               <option value="Repair">Repair</option>
               <option value="Maintenance">Maintenance</option>
               <option value="Estimate">Estimate</option>
+              <option value="After Hours Bonus">⭐ After Hours Bonus (+$100)</option>
             </select>
           </div>
         </div>
@@ -314,26 +317,36 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
             <input id="dateIn" type="date">
           </div>
 
-          <!-- Hours Slider -->
-          <div style="margin-top:12px;">
+          <!-- Big hours display first, then slider below -->
+          <div style="margin-top:14px;">
             <label>Hours Worked</label>
-            <div class="hours-slider-wrap">
-              <input type="range" id="hoursSlider" min="0" max="16" step="0.25" value="0" oninput="onSliderChange(this.value)" class="hours-slider">
-              <div class="slider-labels">
-                <span>0</span><span>4</span><span>8</span><span>12</span><span>16</span>
+
+            <!-- Number display -->
+            <div class="hours-box" style="margin-top:8px;margin-bottom:16px;">
+              <div class="hours-num" id="hoursDisplay">0h</div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+                <div class="hours-lbl">Total<br>Hours</div>
+                <input type="number" id="totalHrs" min="0" max="24" step="0.25"
+                  style="width:70px;font-size:13px;padding:5px 8px;text-align:center;background:var(--navy-dark);border:1px solid var(--border-soft);color:var(--muted);border-radius:8px;"
+                  placeholder="or type"
+                  oninput="onManualHrsChange(this.value)">
               </div>
             </div>
-          </div>
 
-          <div class="hours-box" style="margin-top:14px;">
-            <div class="hours-num" id="hoursDisplay">0h</div>
-            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-              <div class="hours-lbl">Total<br>Hours</div>
-              <!-- Manual override input -->
-              <input type="number" id="totalHrs" min="0" max="24" step="0.25"
-                style="width:70px;font-size:13px;padding:5px 8px;text-align:center;background:var(--navy-dark);border:1px solid var(--border-soft);color:var(--muted);border-radius:8px;"
-                placeholder="or type"
-                oninput="onManualHrsChange(this.value)">
+            <!-- Slider below the number -->
+            <div style="display:flex;justify-content:flex-end;margin-bottom:6px;">
+              <span style="font-size:11px;color:var(--accent);font-family:'DM Mono',monospace;font-weight:700;">← drag to set hours</span>
+            </div>
+            <div class="hours-slider-wrap">
+              <input type="range" id="hoursSlider" min="0" max="16" step="0.25" value="0"
+                oninput="onSliderChange(this.value)" class="hours-slider">
+              <div style="display:flex;justify-content:space-between;padding:4px 2px 0;">
+                <span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;">0</span>
+                <span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;">4h</span>
+                <span style="font-size:10px;color:var(--accent);font-family:'DM Mono',monospace;font-weight:700;">8h</span>
+                <span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;">12h</span>
+                <span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;">16h</span>
+              </div>
             </div>
           </div>
         </div>
@@ -588,31 +601,20 @@ function buildJobDropdown() {
   renderRecentChips();
 }
 function onJobSelectChange() {
-  const val = document.getElementById('jobSelect').value;
-  const show = val === '__other__';
-  document.getElementById('customJobWrap').classList.toggle('show', show);
-  if (!show) document.getElementById('customJob').value = '';
-  else setTimeout(() => document.getElementById('customJob').focus(), 50);
   updatePayTypeBadge();
 }
 function selectJob(jobName) {
   const sel = document.getElementById('jobSelect');
   const opt = [...sel.options].find(o => o.value === jobName);
-  if (opt) { sel.value = jobName; document.getElementById('customJobWrap').classList.remove('show'); }
-  else { sel.value = '__other__'; document.getElementById('customJob').value = jobName; document.getElementById('customJobWrap').classList.add('show'); }
+  if (opt) { sel.value = jobName; }
   updatePayTypeBadge();
 }
 function getSelectedJob() {
   const sel = document.getElementById('jobSelect');
-  if (sel.value === '__other__') return document.getElementById('customJob').value.trim();
-  return sel.value;
+  return sel.value || '';
 }
 function renderRecentChips() {
-  const recents = [...new Set(entries.map(e => e.job))].slice(0,3);
-  const row = document.getElementById('recentChips');
-  if (!recents.length) { row.innerHTML = ''; return; }
-  row.innerHTML = '<span style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.08em;text-transform:uppercase;align-self:center;margin-right:2px;">Recent:</span>' +
-    recents.map(j => `<span class="job-tag recent" onclick="selectJob('${j.replace(/'/g,"&#39;")}')">${j.length>24?j.slice(0,22)+'…':j}</span>`).join('');
+  // Recent chips removed — no-op kept for compatibility
 }
 function renderJobManager() {
   const el = document.getElementById('jobListEl');
