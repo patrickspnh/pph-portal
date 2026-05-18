@@ -49,6 +49,7 @@ header { position: relative; z-index: 10; padding: 48px 24px 0; display: flex; f
 /* PROFILE BANNER */
 .profile-banner { margin: 0 16px 12px; background: var(--navy-mid); border: 1px solid var(--border-soft); border-radius: 14px; padding: 11px 14px; display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 10; animation: fadeUp 0.3s ease both; }
 .profile-banner.hidden { display: none; }
+.hidden { display: none !important; }
 .pb-left { display: flex; align-items: center; gap: 10px; }
 .pb-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--navy); border: 2px solid var(--accent); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: var(--accent); flex-shrink: 0; }
 .pb-name { font-size: 13px; font-weight: 700; color: var(--text); }
@@ -247,7 +248,7 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
         <button class="btn-primary-sm" onclick="saveProfile()">Save My Info →</button>
       </div>
 
-      <div id="logFormWrap">
+      <div id="logFormWrap" style="display:none;">
         <div class="card">
           <div class="card-title"><span>🔧</span> Job / Project</div>
           <div>
@@ -401,7 +402,7 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 // ─── ONESIGNAL CONFIG ────────────────────────────────────────────────
 // TODO: Replace with your OneSignal App ID
 // Get this from onesignal.com → Your App → Settings → Keys & IDs
-const ONESIGNAL_APP_ID = 6c046269-4791-4a99-9a31-68093320f8f8;  // e.g. "a1b2c3d4-..."
+const ONESIGNAL_APP_ID = "YOUR_ONESIGNAL_APP_ID";  // e.g. "a1b2c3d4-..."
 
 // ─── DEFAULT JOBS ───────────────────────────────────────────────────
 const DEFAULT_JOBS = [
