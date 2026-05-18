@@ -253,15 +253,45 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
       <div id="logFormWrap" style="display:none;">
         <div class="card">
           <div class="card-title"><span>🔧</span> Job / Project</div>
-          <div>
-            <label for="jobSelect">Select a Job</label>
-            <select id="jobSelect" onchange="onJobSelectChange()"></select>
+
+          <!-- Job dropdown -->
+          <div class="field">
+            <label for="jobSelect">Job / Address</label>
+            <select id="jobSelect" onchange="onJobSelectChange()">
+              <option value="" disabled selected>— Select a job —</option>
+            </select>
           </div>
           <div class="custom-job-wrap" id="customJobWrap">
             <label for="customJob">Type Job Name</label>
             <input id="customJob" type="text" placeholder="e.g. 123 Main St — Boiler Repair">
           </div>
           <div id="recentChips" class="job-tag-row"></div>
+
+          <!-- Work type dropdowns -->
+          <div class="field-row" style="margin-top:10px;">
+            <div>
+              <label for="workTrade">Trade</label>
+              <select id="workTrade">
+                <option value="" disabled selected>— Select —</option>
+                <option value="Plumbing">Plumbing</option>
+                <option value="Heating">Heating</option>
+                <option value="HVAC">HVAC</option>
+                <option value="Electrical">Electrical</option>
+                <option value="General Labor">General Labor</option>
+              </select>
+            </div>
+            <div>
+              <label for="workType">Work Type</label>
+              <select id="workType">
+                <option value="" disabled selected>— Select —</option>
+                <option value="Service Call">Service Call</option>
+                <option value="New Install">New Install</option>
+                <option value="Repair">Repair</option>
+                <option value="Maintenance">Maintenance</option>
+                <option value="Estimate">Estimate</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         <div class="card">
@@ -531,7 +561,8 @@ function updateProfileBanner() {
 // ─── JOB DROPDOWN ────────────────────────────────────────────────────
 function buildJobDropdown() {
   const sel = document.getElementById('jobSelect');
-  sel.innerHTML = '';
+  // Keep the placeholder
+  sel.innerHTML = '<option value="" disabled selected>— Select a job —</option>';
   jobs.forEach(j => {
     const o = document.createElement('option');
     o.value = j; o.textContent = j; sel.appendChild(o);
@@ -624,15 +655,19 @@ function toMin(t) { const [h,m] = t.split(':').map(Number); return h*60+m; }
 // ─── SUBMIT ──────────────────────────────────────────────────────────
 async function submitEntry() {
   if (!empName) return toast('Please set up your profile first', 'err');
-  const job     = getSelectedJob();
-  const date    = document.getElementById('dateIn').value;
-  const notes   = document.getElementById('notes').value.trim();
-  const payType = getJobPayType(job);
-  if (!job)     return toast('Select or enter a job', 'err');
-  if (!date)    return toast('Pick a date', 'err');
-  if (!calcHrs) return toast('Enter hours worked', 'err');
+  const job      = getSelectedJob();
+  const date     = document.getElementById('dateIn').value;
+  const notes    = document.getElementById('notes').value.trim();
+  const payType  = getJobPayType(job);
+  const trade    = document.getElementById('workTrade').value;
+  const workType = document.getElementById('workType').value;
+  if (!job)      return toast('Select or enter a job', 'err');
+  if (!trade)    return toast('Select a trade', 'err');
+  if (!workType) return toast('Select a work type', 'err');
+  if (!date)     return toast('Pick a date', 'err');
+  if (!calcHrs)  return toast('Enter hours worked', 'err');
 
-  const entry = { id: Date.now(), emp: empName, job, date, hrs: calcHrs, notes, payType, synced: false };
+  const entry = { id: Date.now(), emp: empName, job, date, hrs: calcHrs, notes, payType, trade, workType, synced: false };
   setBusy(true);
 
   if (sheetUrl) {
@@ -640,7 +675,7 @@ async function submitEntry() {
       await fetch(sheetUrl, {
         method: 'POST', mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ employee: empName, job, date, hours: calcHrs, notes, payType })
+        body: JSON.stringify({ employee: empName, job, date, hours: calcHrs, notes, payType, trade, workType })
       });
       entry.synced = true;
       toast('✓ Logged & synced to Google Sheets', 'ok');
@@ -662,6 +697,8 @@ function clearForm() {
   document.getElementById('notes').value = '';
   document.getElementById('hoursDisplay').textContent = '—';
   document.getElementById('dateIn').value = todayStr();
+  document.getElementById('workTrade').value = '';
+  document.getElementById('workType').value = '';
   calcHrs = null;
   if (lastJob) selectJob(lastJob); else updatePayTypeBadge();
 }
@@ -725,6 +762,7 @@ function renderHistory() {
         <div class="e-meta">${e.emp} · ${fmtDate(e.date)}</div>
         ${e.synced ? '<div class="e-synced">✓ Synced</div>' : ''}
         ${e.payType ? `<div class="e-pay ${e.payType}">${PAY_LABELS[e.payType]||e.payType}</div>` : ''}
+        ${e.trade || e.workType ? `<div class="e-meta" style="margin-top:3px;">${[e.trade,e.workType].filter(Boolean).join(' · ')}</div>` : ''}
       </div>
       <div class="e-hrs">${e.hrs}h</div>
       <button class="e-del" onclick="del(${e.id})">×</button>
