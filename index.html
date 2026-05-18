@@ -513,9 +513,10 @@ let notifToken    = localStorage.getItem('pph_notif_token') || '';
   document.getElementById('dateIn').value = todayStr();
   // URL is baked in — always connected
   if (sheetUrl) {
-    if (document.getElementById('sheetUrl')) document.getElementById('sheetUrl').value = sheetUrl;
-    setConnected(true);
+    const urlInput = document.getElementById('sheetUrl');
+    if (urlInput) urlInput.value = sheetUrl;
     localStorage.setItem('pph_url', sheetUrl);
+    setConnected(true);
   }
   buildJobDropdown();
   renderJobManager();
