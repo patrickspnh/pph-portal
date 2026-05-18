@@ -850,7 +850,7 @@ function renderHistory() {
   const wTotal = entries.filter(e => new Date(e.date+'T12:00') >= wStart).reduce((s,e) => s+e.hrs, 0);
   chip.textContent = wTotal.toFixed(1)+'h this week';
   list.innerHTML = entries.map(e => `
-    <div class="entry" id="e${e.id}">
+    <div class="entry" id="entry_${e.id}">
       <div class="e-bar"></div>
       <div class="e-body">
         <div class="e-job">${e.job}</div>
@@ -860,12 +860,13 @@ function renderHistory() {
         ${e.trade || e.workType ? `<div class="e-meta" style="margin-top:3px;">${[e.trade,e.workType].filter(Boolean).join(' · ')}</div>` : ''}
       </div>
       <div class="e-hrs">${e.hrs}h</div>
-      <button class="e-del" onclick="del(${e.id})">×</button>
+      <button class="e-del" onclick="del('${String(e.id).replace(/'/g,&quot;\\'&quot;)}')">×</button>
     </div>
   `).join('');
 }
 function del(id) {
-  const entry = entries.find(e => e.id === id);
+  const sid   = String(id);
+  const entry = entries.find(e => String(e.id) === sid);
   if (!entry) return;
 
   // Record this key so fetchHistoryFromSheet won't re-add it
@@ -874,7 +875,7 @@ function del(id) {
   saveDeletedKeys();
 
   // Animate out
-  const el = document.getElementById('e' + id);
+  const el = document.getElementById('entry_' + sid);
   if (el) { el.style.opacity = '0'; el.style.transform = 'translateX(20px)'; }
 
   // Delete from sheet if it was synced
@@ -893,7 +894,7 @@ function del(id) {
   }
 
   setTimeout(() => {
-    entries = entries.filter(e => e.id !== id);
+    entries = entries.filter(e => String(e.id) !== sid);
     save();
     renderHistory();
   }, 200);
