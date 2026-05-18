@@ -508,8 +508,8 @@ let notifToken    = localStorage.getItem('pph_notif_token') || '';
     showProfileSetup();
   }
 
-  // Poll for new announcements every 2 minutes when app is open
-  setInterval(fetchAnnouncements, 120000);
+  // Poll for new announcements every 30 seconds when app is open
+  setInterval(fetchAnnouncements, 30000);
   fetchAnnouncements();
   installPWA();
 })();
@@ -818,32 +818,41 @@ function renderAnnouncements() {
     list.innerHTML = '<div class="ann-empty"><div class="ico">📣</div><div>No announcements yet.</div></div>';
     return;
   }
-  list.innerHTML = announcements.map(ann => {
-    const isUnread = ann.timestamp > lastAnnCheck;
-    const replies  = (ann.replies || []);
+
+  list.innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+      <button onclick="fetchAnnouncements()" style="background:none;border:1px solid var(--border-soft);color:var(--muted);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:6px 12px;border-radius:8px;cursor:pointer;">↻ Refresh</button>
+    </div>` +
+  announcements.map(ann => {
+    const isUnread    = ann.timestamp > lastAnnCheck;
+    const replies     = ann.replies || [];
+    const reactions   = ann.reactions || {};
     const myReactions = JSON.parse(localStorage.getItem('pph_react_'+ann.id) || '{}');
 
+    // Reaction buttons — only show if has count OR always show all 4
     const reactionEmojis = ['👍','✅','👀','🔥'];
     const reactionsHtml = reactionEmojis.map(emoji => {
-      const count = (ann.reactions && ann.reactions[emoji]) || 0;
+      const count   = reactions[emoji] || 0;
       const reacted = myReactions[emoji];
-      return `<button class="reaction-btn ${reacted?'reacted':''}" onclick="react('${ann.id}','${emoji}')">
-        ${emoji} <span class="r-count">${count||''}</span>
+      return `<button class="reaction-btn ${reacted ? 'reacted' : ''}" onclick="react('${ann.id}','${emoji}')">
+        ${emoji}<span class="r-count">${count > 0 ? ' ' + count : ''}</span>
       </button>`;
     }).join('');
 
-    const repliesHtml = replies.map(r => `
-      <div class="reply-item">
-        <div class="reply-avatar">${(r.author||' ')[0].toUpperCase()}</div>
-        <div class="reply-bubble">
-          <div class="reply-name">${r.author}</div>
-          <div class="reply-text">${r.text}</div>
-          <div class="reply-time">${r.time}</div>
-        </div>
-      </div>
-    `).join('');
+    // Replies — show all existing replies
+    const repliesHtml = replies.length > 0
+      ? replies.map(r => `
+        <div class="reply-item">
+          <div class="reply-avatar">${(r.author||'?')[0].toUpperCase()}</div>
+          <div class="reply-bubble">
+            <div class="reply-name">${r.author}</div>
+            <div class="reply-text">${r.text}</div>
+            <div class="reply-time">${r.time || ''}</div>
+          </div>
+        </div>`).join('')
+      : '';
 
-    return `<div class="ann-card ${isUnread?'unread':''}" id="ann_${ann.id}">
+    return `<div class="ann-card ${isUnread ? 'unread' : ''}" id="ann_${ann.id}">
       <div class="ann-meta">
         <div class="ann-avatar">PC</div>
         <div>
@@ -853,13 +862,13 @@ function renderAnnouncements() {
       </div>
       <div class="ann-body">${ann.message}</div>
       <div class="ann-reactions">${reactionsHtml}</div>
-      ${replies.length || true ? `<div class="ann-replies">
+      <div class="ann-replies">
         ${repliesHtml}
         <div class="reply-input-row">
           <input type="text" id="replyInput_${ann.id}" placeholder="Reply…">
           <button class="btn-reply" onclick="submitReply('${ann.id}')">Send</button>
         </div>
-      </div>` : ''}
+      </div>
     </div>`;
   }).join('');
 }
@@ -915,7 +924,7 @@ async function submitReply(annId) {
       });
       input.value = '';
       toast('Reply sent', 'ok');
-      setTimeout(fetchAnnouncements, 1000);
+      fetchAnnouncements();
     } catch(e) { toast('Could not send reply', 'err'); }
   } else {
     toast('Not connected to sheet', 'err');
