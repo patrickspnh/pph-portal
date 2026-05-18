@@ -289,7 +289,7 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
         <div class="card">
           <div class="card-title"><span>🔧</span> Job / Project</div>
 
-          <!-- Job dropdown only -->
+          <!-- Job dropdown -->
           <div class="field">
             <label for="jobSelect">Select a Job</label>
             <select id="jobSelect" onchange="onJobSelectChange()">
@@ -297,10 +297,16 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
             </select>
           </div>
 
+          <!-- Write-in field — shown when "Write in a job" is selected -->
+          <div id="customJobWrap" class="custom-job-wrap">
+            <label for="customJob">Type Job Name / Address</label>
+            <input id="customJob" type="text" placeholder="e.g. 123 Main St — Boiler Repair" autocomplete="off">
+          </div>
+
           <!-- Work type -->
           <div class="field" style="margin-top:10px;">
             <label for="workType">Work Type</label>
-            <select id="workType">
+            <select id="workType" onchange="updateBonusDisplay()">
               <option value="" disabled selected>— Select work type —</option>
               <option value="Service Call">Service Call</option>
               <option value="New Install">New Install</option>
@@ -335,6 +341,13 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
               </div>
             </div>
 
+            <!-- After Hours Bonus amount display — only visible when bonus selected -->
+            <div id="bonusAmountBox" style="display:none;background:rgba(232,201,106,0.12);border:1px solid rgba(232,201,106,0.4);border-radius:12px;padding:11px 14px;margin-bottom:12px;text-align:center;">
+              <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-bottom:4px;">⭐ After Hours Bonus</div>
+              <div style="font-family:'DM Mono',monospace;font-size:28px;font-weight:500;color:var(--gold);" id="bonusAmountDisplay">$0.00</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:3px;">$100 first hour · $40 each additional hour</div>
+            </div>
+
             <!-- Slider below the number -->
             <div style="display:flex;justify-content:flex-end;margin-bottom:6px;">
               <span style="font-size:11px;color:var(--accent);font-family:'DM Mono',monospace;font-weight:700;">← drag to set hours</span>
@@ -364,6 +377,17 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
         <div class="card">
           <div class="card-title"><span>📝</span> Notes (optional)</div>
           <textarea id="notes" placeholder="Work completed, parts used, address, special notes…"></textarea>
+        </div>
+
+        <!-- Overtime warning — shown when weekly total hits 40h -->
+        <div id="overtimeWarning" style="display:none;background:rgba(232,201,106,0.12);border:1px solid rgba(232,201,106,0.5);border-radius:14px;padding:13px 15px;margin-bottom:10px;display:none;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:22px;">⚠️</span>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--gold);">Overtime Alert</div>
+              <div style="font-size:12px;color:var(--text-soft);margin-top:2px;">You're at <strong id="weekTotalDisplay" style="color:var(--gold);"></strong> this week. Hours over 40 may be paid at an overtime rate. Give Patrick a heads up if needed.</div>
+            </div>
+          </div>
         </div>
 
         <button class="btn-submit" id="submitBtn" onclick="submitEntry()">
@@ -512,6 +536,7 @@ let notifToken    = localStorage.getItem('pph_notif_token') || '';
   setInterval(fetchAnnouncements, 30000);
   fetchAnnouncements();
   installPWA();
+  checkOvertimeWarning();
 })();
 
 // ─── PWA INSTALL ────────────────────────────────────────────────────
@@ -603,6 +628,15 @@ function buildJobDropdown() {
   renderRecentChips();
 }
 function onJobSelectChange() {
+  const val  = document.getElementById('jobSelect').value;
+  const wrap = document.getElementById('customJobWrap');
+  if (val === '__other__') {
+    wrap.classList.add('show');
+    setTimeout(() => document.getElementById('customJob').focus(), 50);
+  } else {
+    wrap.classList.remove('show');
+    document.getElementById('customJob').value = '';
+  }
   updatePayTypeBadge();
 }
 function selectJob(jobName) {
@@ -613,6 +647,9 @@ function selectJob(jobName) {
 }
 function getSelectedJob() {
   const sel = document.getElementById('jobSelect');
+  if (sel.value === '__other__') {
+    return document.getElementById('customJob').value.trim();
+  }
   return sel.value || '';
 }
 function renderRecentChips() {
@@ -650,16 +687,39 @@ function updatePayTypeBadge() {
 }
 function getJobPayType(job) { return jobPayTypes[job] || 'standard'; }
 
+// ─── BONUS CALCULATION ───────────────────────────────────────────────
+function calcBonusAmount(hrs) {
+  if (!hrs || hrs <= 0) return 0;
+  // $100 for first hour, $40 for each additional hour
+  return 100 + Math.max(0, hrs - 1) * 40;
+}
+
+function updateBonusDisplay() {
+  const workType  = document.getElementById('workType').value;
+  const bonusBox  = document.getElementById('bonusAmountBox');
+  const bonusAmt  = document.getElementById('bonusAmountDisplay');
+  if (!bonusBox) return;
+
+  if (workType === 'After Hours Bonus') {
+    bonusBox.style.display = 'block';
+    const amount = calcBonusAmount(calcHrs || 0);
+    if (bonusAmt) bonusAmt.textContent = '$' + amount.toFixed(2);
+  } else {
+    bonusBox.style.display = 'none';
+  }
+}
+
 // ─── HOURS SLIDER ────────────────────────────────────────────────────
 function onSliderChange(val) {
   const h = parseFloat(val);
   calcHrs = h > 0 ? h : null;
   document.getElementById('hoursDisplay').textContent = h > 0 ? h + 'h' : '0h';
   document.getElementById('totalHrs').value = h > 0 ? h : '';
-  // Update slider fill color
   const pct = (h / 16) * 100;
   document.getElementById('hoursSlider').style.background =
     `linear-gradient(to right, var(--accent) ${pct}%, var(--border-soft) ${pct}%)`;
+  checkOvertimeWarning();
+  updateBonusDisplay();
 }
 
 function onManualHrsChange(val) {
@@ -671,6 +731,8 @@ function onManualHrsChange(val) {
     const pct = (h / 16) * 100;
     document.getElementById('hoursSlider').style.background =
       `linear-gradient(to right, var(--accent) ${pct}%, var(--border-soft) ${pct}%)`;
+    checkOvertimeWarning();
+    updateBonusDisplay();
   }
 }
 
@@ -690,6 +752,7 @@ async function submitEntry() {
   if (!calcHrs)  return toast('Slide to select hours worked', 'err');
 
   const entry = { id: Date.now(), emp: empName, job, date, hrs: calcHrs, notes, payType, workType, synced: false };
+  const bonusAmount = workType === 'After Hours Bonus' ? calcBonusAmount(calcHrs) : 0;
   setBusy(true);
 
   if (sheetUrl) {
@@ -697,7 +760,7 @@ async function submitEntry() {
       await fetch(sheetUrl, {
         method: 'POST', mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ employee: empName, job, date, hours: calcHrs, notes, payType, trade: '', workType })
+        body: JSON.stringify({ employee: empName, job, date, hours: calcHrs, notes, payType, trade: '', workType, bonusAmount })
       });
       entry.synced = true;
       toast('✓ Logged & synced to Google Sheets', 'ok');
@@ -791,9 +854,30 @@ function renderHistory() {
   `).join('');
 }
 function del(id) {
-  const el = document.getElementById('e'+id);
-  if (el) { el.style.opacity='0'; el.style.transform='translateX(20px)'; }
-  setTimeout(() => { entries = entries.filter(e => e.id !== id); save(); renderHistory(); }, 200);
+  const entry = entries.find(e => e.id === id);
+  const el    = document.getElementById('e' + id);
+  if (el) { el.style.opacity = '0'; el.style.transform = 'translateX(20px)'; }
+
+  // Delete from sheet if it was synced
+  if (entry && entry.synced && sheetUrl && empName) {
+    fetch(sheetUrl, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action:   'deleteEntry',
+        employee: empName,
+        job:      entry.job,
+        date:     entry.date,
+        hours:    entry.hrs
+      })
+    }).catch(() => {});
+  }
+
+  setTimeout(() => {
+    entries = entries.filter(e => e.id !== id);
+    save();
+    renderHistory();
+  }, 200);
 }
 
 // ─── ANNOUNCEMENTS ───────────────────────────────────────────────────
@@ -992,7 +1076,31 @@ async function requestNotifPermission() {
   }
 }
 
-// ─── ADMIN PIN ────────────────────────────────────────────────────────
+// ─── OVERTIME CHECK ──────────────────────────────────────────────────
+function checkOvertimeWarning() {
+  const warning = document.getElementById('overtimeWarning');
+  if (!warning) return;
+
+  // Get this week's total from existing entries
+  const wStart = new Date();
+  wStart.setDate(wStart.getDate() - wStart.getDay());
+  wStart.setHours(0, 0, 0, 0);
+
+  const weekTotal = entries
+    .filter(e => new Date(e.date + 'T12:00') >= wStart)
+    .reduce((s, e) => s + e.hrs, 0);
+
+  const pendingHrs = calcHrs || 0;
+  const projectedTotal = weekTotal + pendingHrs;
+
+  if (projectedTotal >= 40) {
+    warning.style.display = 'block';
+    const el = document.getElementById('weekTotalDisplay');
+    if (el) el.textContent = projectedTotal.toFixed(1) + 'h';
+  } else {
+    warning.style.display = 'none';
+  }
+}
 const ADMIN_PIN = '1234'; // Change this to your preferred PIN
 function checkAdminPin() {
   const pin = document.getElementById('adminPin').value;
