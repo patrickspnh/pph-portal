@@ -419,7 +419,7 @@ const PAY_LABELS = {
 
 // ─── STATE ──────────────────────────────────────────────────────────
 let entries     = JSON.parse(localStorage.getItem('pph_entries')  || '[]');
-let sheetUrl    = localStorage.getItem('pph_url')     || '';
+let sheetUrl    = localStorage.getItem('pph_url') || 'https://script.google.com/macros/s/AKfycbzU_nB3itCROlmyyocqyZQzYH83VPIyEpywIlZYJPsYDshwCu0WGyB95ia562D5G2x5/exec';
 let empName     = localStorage.getItem('pph_name')    || '';
 let jobs        = JSON.parse(localStorage.getItem('pph_jobs')     || JSON.stringify(DEFAULT_JOBS));
 let jobPayTypes = JSON.parse(localStorage.getItem('pph_jobpay')   || '{}');
@@ -432,7 +432,12 @@ let notifToken    = localStorage.getItem('pph_notif_token') || '';
 // ─── BOOT ───────────────────────────────────────────────────────────
 (function init() {
   document.getElementById('dateIn').value = todayStr();
-  if (sheetUrl) { document.getElementById('sheetUrl').value = sheetUrl; setConnected(true); }
+  // URL is baked in — always connected
+  if (sheetUrl) {
+    if (document.getElementById('sheetUrl')) document.getElementById('sheetUrl').value = sheetUrl;
+    setConnected(true);
+    localStorage.setItem('pph_url', sheetUrl);
+  }
   buildJobDropdown();
   renderJobManager();
   renderHistory();
