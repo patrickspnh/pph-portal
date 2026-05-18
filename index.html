@@ -238,14 +238,16 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
   <main>
     <!-- ═══ LOG HOURS ═══ -->
     <div class="view active" id="view-log">
-      <div class="card hidden" id="profileSetupCard">
-        <div class="ps-title">Welcome! 👋</div>
-        <div class="ps-sub">Enter your name once and we'll remember you every time.</div>
-        <div class="field">
-          <label for="setupName">Your Name</label>
-          <input id="setupName" type="text" placeholder="e.g. Mike Johnson" autocomplete="name">
+      <div id="profileSetupCard" style="display:none;">
+        <div class="card">
+          <div class="ps-title">Welcome! 👋</div>
+          <div class="ps-sub">Enter your name once and we'll remember you every time.</div>
+          <div class="field">
+            <label for="setupName">Your Name</label>
+            <input id="setupName" type="text" placeholder="e.g. Mike Johnson" autocomplete="name">
+          </div>
+          <button class="btn-primary-sm" onclick="saveProfile()">Save My Info →</button>
         </div>
-        <button class="btn-primary-sm" onclick="saveProfile()">Save My Info →</button>
       </div>
 
       <div id="logFormWrap" style="display:none;">
@@ -489,14 +491,14 @@ function showTab(name) {
 
 // ─── PROFILE ─────────────────────────────────────────────────────────
 function showProfileSetup() {
-  document.getElementById('profileSetupCard').classList.remove('hidden');
+  document.getElementById('profileSetupCard').style.display = 'block';
   document.getElementById('logFormWrap').style.display = 'none';
   document.getElementById('profileBanner').classList.add('hidden');
   if (empName) document.getElementById('setupName').value = empName;
   setTimeout(() => document.getElementById('setupName').focus(), 100);
 }
 function showLogForm(withBanner) {
-  document.getElementById('profileSetupCard').classList.add('hidden');
+  document.getElementById('profileSetupCard').style.display = 'none';
   document.getElementById('logFormWrap').style.display = 'block';
   document.getElementById('profileBanner').classList.toggle('hidden', !withBanner);
 }
