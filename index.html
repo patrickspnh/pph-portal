@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0d1d38">
+<meta name="version" content="3.1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Patrick's P&H">
@@ -517,6 +518,8 @@ let notifToken    = localStorage.getItem('pph_notif_token') || '';
     if (urlInput) urlInput.value = sheetUrl;
     localStorage.setItem('pph_url', sheetUrl);
     setConnected(true);
+    // Also call after short delay in case DOM isn't fully ready
+    setTimeout(() => setConnected(true), 300);
   }
   buildJobDropdown();
   renderJobManager();
