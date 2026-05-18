@@ -849,36 +849,43 @@ function renderHistory() {
   const wStart = new Date(); wStart.setDate(wStart.getDate()-wStart.getDay()); wStart.setHours(0,0,0,0);
   const wTotal = entries.filter(e => new Date(e.date+'T12:00') >= wStart).reduce((s,e) => s+e.hrs, 0);
   chip.textContent = wTotal.toFixed(1)+'h this week';
-  list.innerHTML = entries.map(e => `
-    <div class="entry" id="entry_${e.id}">
+  list.innerHTML = entries.map((e,i) => `
+    <div class="entry" id="entry_${i}">
       <div class="e-bar"></div>
       <div class="e-body">
         <div class="e-job">${e.job}</div>
         <div class="e-meta">${e.emp} · ${fmtDate(e.date)}</div>
         ${e.synced ? '<div class="e-synced">✓ Synced</div>' : ''}
         ${e.payType ? `<div class="e-pay ${e.payType}">${PAY_LABELS[e.payType]||e.payType}</div>` : ''}
-        ${e.trade || e.workType ? `<div class="e-meta" style="margin-top:3px;">${[e.trade,e.workType].filter(Boolean).join(' · ')}</div>` : ''}
+        ${e.workType ? `<div class="e-meta" style="margin-top:3px;">${e.workType}</div>` : ''}
       </div>
       <div class="e-hrs">${e.hrs}h</div>
-      <button class="e-del" onclick="del('${String(e.id).replace(/'/g,&quot;\\'&quot;)}')">×</button>
+      <button class="e-del" data-idx="${i}">×</button>
     </div>
   `).join('');
+
+  // Attach delete handlers after rendering
+  list.querySelectorAll('.e-del').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const idx = parseInt(this.getAttribute('data-idx'));
+      delByIndex(idx);
+    });
+  });
 }
-function del(id) {
-  const sid   = String(id);
-  const entry = entries.find(e => String(e.id) === sid);
+function delByIndex(idx) {
+  const entry = entries[idx];
   if (!entry) return;
 
-  // Record this key so fetchHistoryFromSheet won't re-add it
+  // Record so fetchHistoryFromSheet won't re-add it
   const key = entry.date + '|' + entry.job + '|' + entry.hrs;
   deletedKeys.add(key);
   saveDeletedKeys();
 
   // Animate out
-  const el = document.getElementById('entry_' + sid);
+  const el = document.getElementById('entry_' + idx);
   if (el) { el.style.opacity = '0'; el.style.transform = 'translateX(20px)'; }
 
-  // Delete from sheet if it was synced
+  // Delete from sheet if synced
   if (entry.synced && sheetUrl && empName) {
     fetch(sheetUrl, {
       method: 'POST', mode: 'no-cors',
@@ -894,10 +901,15 @@ function del(id) {
   }
 
   setTimeout(() => {
-    entries = entries.filter(e => String(e.id) !== sid);
+    entries.splice(idx, 1);
     save();
     renderHistory();
-  }, 200);
+  }, 220);
+}
+
+function del(id) { // kept for compatibility
+  const idx = entries.findIndex(e => String(e.id) === String(id));
+  if (idx !== -1) delByIndex(idx);
 }
 
 // ─── ANNOUNCEMENTS ───────────────────────────────────────────────────
