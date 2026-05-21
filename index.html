@@ -943,7 +943,6 @@ async function initChat() {
   try {
     // Get token from Apps Script
     const tokenUrl = sheetUrl + '?action=getChatToken&user=' + encodeURIComponent(empName);
-    Logger && Logger.log && Logger.log('Fetching token from: ' + tokenUrl);
     const res  = await fetch(tokenUrl);
     const text = await res.text();
     console.log('Chat token response:', text);
