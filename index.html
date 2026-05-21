@@ -854,6 +854,7 @@ let notifToken    = localStorage.getItem('pph_notif_token') || '';
   // Poll for new announcements every 30 seconds when app is open
   setInterval(fetchAnnouncements, 30000);
   fetchAnnouncements();
+  fetchJobsFromSheet();
   installPWA();
   checkOvertimeWarning();
 })();
@@ -888,7 +889,7 @@ function showTab(name) {
   if (name === 'history')      { renderHistory(); fetchHistoryFromSheet(); }
   if (name === 'announcements'){ markAnnouncementsRead(); renderAnnouncements(); }
   if (name === 'messages')     { initChat(); }
-  if (name === 'jobs')         { initJobsTab(); }
+  if (name === 'jobs')         { initJobsTab(); fetchJobsFromSheet(); }
 }
 
 // ─── PROFILE ─────────────────────────────────────────────────────────
@@ -2195,6 +2196,26 @@ function checkAdminPin() {
     document.getElementById('adminPin').value = '';
   }
 }
+// ─── SYNC JOBS FROM SHEET ────────────────────────────────────────────
+async function fetchJobsFromSheet() {
+  if (!sheetUrl) return;
+  try {
+    const res  = await fetch(sheetUrl + '?action=getJobs');
+    const data = await res.json();
+    if (data && data.jobs && data.jobs.length) {
+      jobs = [...new Set([...data.jobs, ...jobs])];
+      if (data.payTypes) {
+        jobPayTypes = { ...jobPayTypes, ...data.payTypes };
+        localStorage.setItem('pph_jobpay', JSON.stringify(jobPayTypes));
+      }
+      localStorage.setItem('pph_jobs', JSON.stringify(jobs));
+      buildJobDropdown();
+      renderJobManager();
+      if (document.getElementById('view-jobs').classList.contains('active')) initJobsTab();
+    }
+  } catch(e) {}
+}
+
 function saveUrl() {
   const v = document.getElementById('sheetUrl').value.trim();
   if (!v.startsWith('https://script.google.com')) return toast('Please paste a valid Apps Script URL', 'err');
