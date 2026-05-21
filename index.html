@@ -533,6 +533,11 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
           <button class="chat-chan-btn chat-chan-new" onclick="showDMPicker()">+ DM</button>
         </div>
 
+        <!-- Active channel label -->
+        <div id="chatChannelLabel" style="font-size:12px;font-weight:700;color:var(--muted);text-align:center;padding:4px 0 8px;letter-spacing:.06em;text-transform:uppercase;">
+          Team Chat — All Employees
+        </div>
+
         <!-- Message list -->
         <div id="messageList" class="message-list"></div>
 
@@ -1003,12 +1008,15 @@ function startChatPoll() {
 
 async function switchChannel(type, otherUser) {
   document.querySelectorAll('.chat-chan-btn').forEach(b => b.classList.remove('active'));
+  const label = document.getElementById('chatChannelLabel');
   if (type === 'group') {
     activeChatChannel = 'group';
     document.getElementById('chanBtnGroup').classList.add('active');
+    if (label) label.textContent = 'Team Chat — All Employees';
   } else {
     const names = [empName, otherUser].sort();
     activeChatChannel = 'dm_' + names.join('_').toLowerCase().replace(/[^a-z0-9_]/g,'');
+    if (label) label.textContent = '💬 Direct Message — ' + otherUser;
     const btn = document.getElementById('dmBtn_' + otherUser.replace(/\s/g,'_'));
     if (btn) btn.classList.add('active');
   }
@@ -1040,9 +1048,10 @@ function showDMPicker() {
 // ─────────────────────────────────────────────────────────────
 // SCHEDULE
 // ─────────────────────────────────────────────────────────────
-let scheduleData   = JSON.parse(localStorage.getItem('pph_schedule') || '{}');
+let scheduleData    = JSON.parse(localStorage.getItem('pph_schedule') || '{}');
 let schedWeekOffset = 0;
-let editingDay     = null;
+let editingDay      = null;
+let schedView       = 'week'; // day, week, month, year
 
 const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
@@ -1060,11 +1069,37 @@ function getWeekDates(offset) {
 }
 
 function renderSchedule() {
-  const dates   = getWeekDates(schedWeekOffset);
   const today   = new Date(); today.setHours(0,0,0,0);
-  const startFmt = dates[0].toLocaleDateString('en-US', { month:'short', day:'numeric' });
-  const endFmt   = dates[6].toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
-  document.getElementById('schedWeekLabel').textContent = startFmt + ' – ' + endFmt;
+  let dates     = [];
+  let labelText = '';
+
+  if (schedView === 'day') {
+    const d = new Date(today); d.setDate(d.getDate() + schedWeekOffset);
+    dates = [d];
+    labelText = d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+
+  } else if (schedView === 'week') {
+    dates     = getWeekDates(schedWeekOffset);
+    const s   = dates[0].toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    const e   = dates[6].toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+    labelText = s + ' – ' + e;
+
+  } else if (schedView === 'month') {
+    const base = new Date(today.getFullYear(), today.getMonth() + schedWeekOffset, 1);
+    const year = base.getFullYear();
+    const mon  = base.getMonth();
+    const daysInMonth = new Date(year, mon+1, 0).getDate();
+    for (let i = 1; i <= daysInMonth; i++) dates.push(new Date(year, mon, i));
+    labelText = base.toLocaleDateString('en-US', { month:'long', year:'numeric' });
+
+  } else if (schedView === 'year') {
+    const year = today.getFullYear() + schedWeekOffset;
+    // Show one row per month
+    for (let m = 0; m < 12; m++) dates.push(new Date(year, m, 1));
+    labelText = String(year);
+  }
+
+  document.getElementById('schedWeekLabel').textContent = labelText;
 
   // Build job options in modal
   const jobSel = document.getElementById('shiftJob');
@@ -1076,15 +1111,38 @@ function renderSchedule() {
   // Build employee options in modal
   const empSel = document.getElementById('shiftEmp');
   empSel.innerHTML = '<option value="" disabled selected>— Select employee —</option>' +
-    STREAM_EMPLOYEES.map(n => `<option value="${n}">${n}</option>`).join('');
+    ['Patrick Carlson','Nick Voelker','Trent Carlson','Donnie Nicely',
+     'Jerry Erickson','William Carlson','Adrian Walli','Morgan Ruohonen','Jess Erickson']
+    .map(n => `<option value="${n}">${n}</option>`).join('');
 
   const container = document.getElementById('schedDays');
+
+  if (schedView === 'year') {
+    // Month summary view
+    container.innerHTML = dates.map(d => {
+      const mon      = d.getMonth();
+      const year     = d.getFullYear();
+      const monName  = d.toLocaleDateString('en-US', { month:'long' });
+      const daysInMon = new Date(year, mon+1, 0).getDate();
+      let totalShifts = 0;
+      for (let i = 1; i <= daysInMon; i++) {
+        const key = `${year}-${String(mon+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+        totalShifts += (scheduleData[key] || []).length;
+      }
+      return `<div class="sched-day" onclick="setSchedView('month');schedWeekOffset=${mon - today.getMonth()};renderSchedule();" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+        <div class="sched-day-name">${monName}</div>
+        <div style="font-size:12px;color:var(--muted);">${totalShifts > 0 ? totalShifts + ' shift' + (totalShifts>1?'s':'') : 'No shifts'}</div>
+      </div>`;
+    }).join('');
+    return;
+  }
+
   container.innerHTML = dates.map(date => {
-    const key      = date.toISOString().split('T')[0];
-    const isToday  = date.getTime() === today.getTime();
-    const dayName  = DAY_NAMES[date.getDay()];
-    const dayFmt   = date.toLocaleDateString('en-US', { month:'short', day:'numeric' });
-    const shifts   = (scheduleData[key] || []);
+    const key       = date.toISOString().split('T')[0];
+    const isToday   = date.getTime() === today.getTime();
+    const dayName   = DAY_NAMES[date.getDay()];
+    const dayFmt    = date.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    const shifts    = (scheduleData[key] || []);
     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
 
     const shiftsHtml = shifts.length
@@ -1114,8 +1172,15 @@ function renderSchedule() {
     </div>`;
   }).join('');
 
-  // Fetch from sheet and merge
   fetchScheduleFromSheet();
+}
+
+function setSchedView(view) {
+  schedView = view;
+  schedWeekOffset = 0;
+  document.querySelectorAll('.sched-view-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('viewBtn-' + view).classList.add('active');
+  renderSchedule();
 }
 
 function changeWeek(dir) {
