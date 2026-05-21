@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Patrick's P&H">
 <link rel="manifest" id="manifestLink">
-<script src="https://cdn.jsdelivr.net/npm/stream-chat/dist/browser/stream-chat.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stream-chat@8.57.4/dist/browser/index.umd.js"></script>
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 <title>Patrick's Plumbing & Heating</title>
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -952,9 +952,9 @@ async function initChat() {
     if (!data.token) throw new Error('No token in response: ' + text.slice(0,100));
 
     const userId = data.userId || slugify(empName);
-    // Get correct StreamChat constructor from SDK
-    const SC = (window.StreamChat && window.StreamChat.StreamChat) || window.StreamChat;
-    if (!SC) throw new Error('Stream SDK not loaded — refresh and try again');
+    // Stream Chat v8 exports as window.StreamChat.StreamChat
+    const SC = window.StreamChat && (window.StreamChat.StreamChat || window.StreamChat);
+    if (!SC || !SC.getInstance) throw new Error('Stream SDK not loaded — refresh and try again');
     streamClient = SC.getInstance(STREAM_API_KEY);
     await streamClient.connectUser({ id: userId, name: empName }, data.token);
 
