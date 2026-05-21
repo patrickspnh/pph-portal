@@ -316,6 +316,26 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 .nav-item { font-size: 8px; padding: 8px 2px 10px; }
 .nav-item svg { width: 20px; height: 20px; }
 
+/* ── JOBS ── */
+.job-tab-btn { flex:1; padding:8px 4px; border-radius:10px; border:1px solid var(--border-soft); background:var(--navy-mid); color:var(--muted); font-size:11px; font-weight:700; cursor:pointer; transition:all 0.2s; text-align:center; white-space:nowrap; }
+.job-tab-btn.active { background:var(--accent); color:var(--navy-deep); border-color:var(--accent); }
+.report-card { background:var(--navy-mid); border:1px solid var(--border-soft); border-left:3px solid var(--accent); border-radius:12px; padding:12px 14px; margin-bottom:10px; }
+.report-date { font-size:10px; color:var(--muted); font-family:'DM Mono',monospace; margin-bottom:6px; }
+.report-crew { font-size:11px; color:var(--accent); margin-bottom:4px; font-weight:700; }
+.report-body { font-size:13px; color:var(--text-soft); line-height:1.5; }
+.expense-card { background:var(--navy-mid); border:1px solid var(--border-soft); border-radius:12px; padding:11px 14px; margin-bottom:8px; display:flex; align-items:center; gap:10px; }
+.expense-cat { font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; background:rgba(79,163,224,0.15); color:var(--accent); padding:3px 8px; border-radius:100px; white-space:nowrap; flex-shrink:0; }
+.expense-body { flex:1; min-width:0; }
+.expense-desc { font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.expense-meta { font-size:10px; color:var(--muted); font-family:'DM Mono',monospace; margin-top:2px; }
+.expense-amt { font-family:'DM Mono',monospace; font-size:16px; color:var(--gold); font-weight:500; flex-shrink:0; }
+.receipt-card { background:var(--navy-mid); border:1px solid var(--border-soft); border-radius:12px; padding:11px 14px; margin-bottom:8px; display:flex; align-items:center; gap:10px; }
+.receipt-thumb { width:48px; height:48px; border-radius:8px; object-fit:cover; flex-shrink:0; border:1px solid var(--border-soft); }
+.receipt-body { flex:1; min-width:0; }
+.receipt-name { font-size:12px; font-weight:700; }
+.receipt-meta { font-size:10px; color:var(--muted); font-family:'DM Mono',monospace; margin-top:2px; }
+.receipt-link { font-size:11px; color:var(--accent); text-decoration:none; margin-top:3px; display:block; }
+
 .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(16px); background: var(--navy-mid); border: 1px solid var(--border); border-radius: 100px; padding: 10px 20px; font-size: 13px; font-weight: 600; white-space: nowrap; opacity: 0; transition: all 0.3s cubic-bezier(0.22,1,0.36,1); z-index: 999; pointer-events: none; max-width: 88vw; text-align: center; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .toast.ok  { border-color: rgba(79,212,160,0.45); color: var(--success); }
@@ -606,6 +626,125 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
       </a>
     </div>
 
+    <!-- ═══ JOBS ═══ -->
+    <div class="view" id="view-jobs">
+
+      <!-- Job selector -->
+      <div class="card" style="margin-bottom:12px;">
+        <div class="card-title"><span>🔧</span> Select Job</div>
+        <select id="jobFileSelect" onchange="loadJobFile()" style="width:100%;padding:10px 12px;background:var(--navy-dark);border:1px solid var(--border-soft);color:var(--text);border-radius:10px;font-size:14px;">
+          <option value="" disabled selected>— Select a job —</option>
+        </select>
+      </div>
+
+      <!-- Job file content — hidden until job selected -->
+      <div id="jobFileContent" style="display:none;">
+
+        <!-- Sub-tabs -->
+        <div style="display:flex;gap:6px;margin-bottom:12px;">
+          <button class="job-tab-btn active" id="jtab-report"   onclick="showJobTab('report')">📋 Daily Report</button>
+          <button class="job-tab-btn"         id="jtab-expenses" onclick="showJobTab('expenses')">💰 Expenses</button>
+          <button class="job-tab-btn"         id="jtab-receipts" onclick="showJobTab('receipts')">📸 Receipts</button>
+        </div>
+
+        <!-- DAILY REPORT TAB -->
+        <div id="jobview-report">
+          <div class="card">
+            <div class="card-title">📋 Daily Report</div>
+            <div class="field">
+              <label for="reportDate">Date</label>
+              <input type="date" id="reportDate">
+            </div>
+            <div class="field">
+              <label for="reportWork">Work Completed</label>
+              <textarea id="reportWork" placeholder="Describe what was done today…" style="height:90px;"></textarea>
+            </div>
+            <div class="field">
+              <label for="reportCrew">Crew on Site</label>
+              <input type="text" id="reportCrew" placeholder="e.g. Nick, Trent, Patrick">
+            </div>
+            <div class="field">
+              <label for="reportIssues">Issues / Notes</label>
+              <textarea id="reportIssues" placeholder="Any problems, materials needed, follow-up required…" style="height:68px;"></textarea>
+            </div>
+            <button class="btn-submit" onclick="saveReport()" style="margin-top:8px;">Submit Daily Report</button>
+          </div>
+
+          <!-- Past reports -->
+          <div id="reportList"></div>
+        </div>
+
+        <!-- EXPENSES TAB -->
+        <div id="jobview-expenses" style="display:none;">
+          <div class="card">
+            <div class="card-title">💰 Log Expense</div>
+            <div class="field-row">
+              <div>
+                <label for="expDate">Date</label>
+                <input type="date" id="expDate">
+              </div>
+              <div>
+                <label for="expAmount">Amount ($)</label>
+                <input type="number" id="expAmount" placeholder="0.00" min="0" step="0.01">
+              </div>
+            </div>
+            <div class="field">
+              <label for="expCategory">Category</label>
+              <select id="expCategory" style="width:100%;padding:10px 12px;background:var(--navy-dark);border:1px solid var(--border-soft);color:var(--text);border-radius:10px;font-size:14px;">
+                <option value="" disabled selected>— Select category —</option>
+                <option value="Parts & Materials">Parts &amp; Materials</option>
+                <option value="Fuel / Mileage">Fuel / Mileage</option>
+                <option value="Tools & Equipment">Tools &amp; Equipment</option>
+                <option value="Subcontractor">Subcontractor</option>
+                <option value="Permit / Inspection fees">Permit / Inspection fees</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="expDesc">Description</label>
+              <input type="text" id="expDesc" placeholder="e.g. Home Depot — copper fittings">
+            </div>
+            <button class="btn-submit" onclick="saveExpense()" style="margin-top:8px;">Log Expense</button>
+          </div>
+
+          <!-- Expense total -->
+          <div class="hours-box" style="margin-bottom:12px;">
+            <div style="font-size:13px;font-weight:700;color:var(--muted);">Total Expenses</div>
+            <div class="hours-num" id="expTotal" style="font-size:28px;">$0.00</div>
+          </div>
+
+          <!-- Past expenses -->
+          <div id="expenseList"></div>
+        </div>
+
+        <!-- RECEIPTS TAB -->
+        <div id="jobview-receipts" style="display:none;">
+          <div class="card">
+            <div class="card-title">📸 Attach Receipt</div>
+            <div style="margin-bottom:12px;font-size:13px;color:var(--text-soft);line-height:1.6;">
+              Take a photo of a receipt or choose from your camera roll. It will be saved to Google Drive and linked to this job.
+            </div>
+            <label for="receiptInput" class="btn-submit" style="display:block;text-align:center;cursor:pointer;margin-bottom:8px;">
+              📷 Take / Choose Photo
+            </label>
+            <input type="file" id="receiptInput" accept="image/*" capture="environment" style="display:none;" onchange="uploadReceipt(this)">
+            <div id="receiptPreview" style="display:none;margin-top:10px;">
+              <img id="receiptImg" style="width:100%;border-radius:10px;border:1px solid var(--border-soft);">
+              <button onclick="confirmReceiptUpload()" class="btn-submit" style="margin-top:8px;">✓ Upload This Receipt</button>
+              <button onclick="cancelReceipt()" style="width:100%;margin-top:6px;padding:10px;background:none;border:1px solid var(--border-soft);color:var(--muted);border-radius:10px;font-size:13px;cursor:pointer;">Cancel</button>
+            </div>
+            <div id="uploadProgress" style="display:none;text-align:center;padding:12px;color:var(--muted);font-size:13px;">
+              <span class="spinner"></span> Uploading…
+            </div>
+          </div>
+
+          <!-- Saved receipts -->
+          <div id="receiptList"></div>
+        </div>
+
+      </div>
+    </div>
+
   </main>
 
   <!-- BOTTOM NAV -->
@@ -613,6 +752,10 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
     <button class="nav-item active" id="nav-log" onclick="showTab('log')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       Log
+    </button>
+    <button class="nav-item" id="nav-jobs" onclick="showTab('jobs')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      Jobs
     </button>
     <button class="nav-item" id="nav-messages" onclick="showTab('messages')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -726,13 +869,14 @@ function installPWA() {
 
 // ─── TABS ────────────────────────────────────────────────────────────
 function showTab(name) {
-  ['log','messages','schedule','announcements','history','setup'].forEach(n => {
+  ['log','jobs','messages','schedule','announcements','history','setup'].forEach(n => {
     document.getElementById('view-' + n).classList.toggle('active', n === name);
     document.getElementById('nav-' + n).classList.toggle('active', n === name);
   });
   if (name === 'history')      { renderHistory(); fetchHistoryFromSheet(); }
   if (name === 'announcements'){ markAnnouncementsRead(); renderAnnouncements(); }
   if (name === 'messages')     { initChat(); }
+  if (name === 'jobs')         { initJobsTab(); }
 }
 
 // ─── PROFILE ─────────────────────────────────────────────────────────
@@ -1045,8 +1189,231 @@ function showDMPicker() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// GOOGLE CALENDAR EMBED
+// JOB FILES
 // ─────────────────────────────────────────────────────────────
+let activeJobFile  = null;
+let jobFileData    = { reports: [], expenses: [], receipts: [] };
+let pendingReceipt = null;
+
+function initJobsTab() {
+  // Populate job dropdown
+  const sel = document.getElementById('jobFileSelect');
+  sel.innerHTML = '<option value="" disabled selected>— Select a job —</option>' +
+    jobs.map(j => `<option value="${j}">${j}</option>`).join('');
+  // Set today's date on forms
+  const today = todayStr();
+  document.getElementById('reportDate').value = today;
+  document.getElementById('expDate').value    = today;
+}
+
+function showJobTab(tab) {
+  ['report','expenses','receipts'].forEach(t => {
+    document.getElementById('jobview-' + t).style.display    = t === tab ? 'block' : 'none';
+    document.getElementById('jtab-' + t).classList.toggle('active', t === tab);
+  });
+  if (tab === 'expenses') renderExpenses();
+  if (tab === 'receipts') renderReceipts();
+  if (tab === 'report')   renderReports();
+}
+
+async function loadJobFile() {
+  const sel = document.getElementById('jobFileSelect');
+  activeJobFile = sel.value;
+  if (!activeJobFile) return;
+
+  document.getElementById('jobFileContent').style.display = 'block';
+  showJobTab('report');
+
+  // Fetch job file data from sheet
+  if (sheetUrl) {
+    try {
+      const url  = sheetUrl + '?action=getJobFile&job=' + encodeURIComponent(activeJobFile);
+      const res  = await fetch(url);
+      const data = await res.json();
+      if (data) {
+        jobFileData.reports  = data.reports  || [];
+        jobFileData.expenses = data.expenses || [];
+        jobFileData.receipts = data.receipts || [];
+        renderReports();
+      }
+    } catch(e) { console.log('Job file load error:', e); }
+  }
+}
+
+// ── DAILY REPORTS ──
+async function saveReport() {
+  if (!activeJobFile) return toast('Select a job first', 'err');
+  const date   = document.getElementById('reportDate').value;
+  const work   = document.getElementById('reportWork').value.trim();
+  const crew   = document.getElementById('reportCrew').value.trim();
+  const issues = document.getElementById('reportIssues').value.trim();
+  if (!work) return toast('Describe work completed', 'err');
+
+  const report = { job: activeJobFile, date, work, crew, issues, author: empName, ts: Date.now() };
+
+  if (sheetUrl) {
+    try {
+      await fetch(sheetUrl, {
+        method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'saveReport', ...report })
+      });
+    } catch(e) {}
+  }
+
+  jobFileData.reports.unshift(report);
+  document.getElementById('reportWork').value   = '';
+  document.getElementById('reportCrew').value   = '';
+  document.getElementById('reportIssues').value = '';
+  renderReports();
+  toast('✓ Daily report saved', 'ok');
+}
+
+function renderReports() {
+  const list = document.getElementById('reportList');
+  const data = jobFileData.reports.filter(r => r.job === activeJobFile);
+  if (!data.length) { list.innerHTML = '<div class="empty" style="padding:20px 0;"><div class="ico">📋</div><div>No reports yet</div></div>'; return; }
+  list.innerHTML = data.map(r => `
+    <div class="report-card">
+      <div class="report-date">${fmtDate(r.date)} · ${r.author}</div>
+      ${r.crew ? `<div class="report-crew">👷 ${r.crew}</div>` : ''}
+      <div class="report-body">${r.work}</div>
+      ${r.issues ? `<div class="report-body" style="margin-top:6px;color:var(--gold);">⚠️ ${r.issues}</div>` : ''}
+    </div>`).join('');
+}
+
+// ── EXPENSES ──
+async function saveExpense() {
+  if (!activeJobFile) return toast('Select a job first', 'err');
+  const date     = document.getElementById('expDate').value;
+  const amount   = parseFloat(document.getElementById('expAmount').value);
+  const category = document.getElementById('expCategory').value;
+  const desc     = document.getElementById('expDesc').value.trim();
+  if (!category) return toast('Select a category', 'err');
+  if (!desc)     return toast('Add a description', 'err');
+  if (!amount || amount <= 0) return toast('Enter a valid amount', 'err');
+
+  const expense = { job: activeJobFile, date, amount, category, desc, author: empName, ts: Date.now() };
+
+  if (sheetUrl) {
+    try {
+      await fetch(sheetUrl, {
+        method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'saveExpense', ...expense })
+      });
+    } catch(e) {}
+  }
+
+  jobFileData.expenses.unshift(expense);
+  document.getElementById('expAmount').value   = '';
+  document.getElementById('expCategory').value = '';
+  document.getElementById('expDesc').value     = '';
+  renderExpenses();
+  toast('✓ Expense logged', 'ok');
+}
+
+function renderExpenses() {
+  const list = document.getElementById('expenseList');
+  const total = document.getElementById('expTotal');
+  const data  = jobFileData.expenses.filter(e => e.job === activeJobFile);
+  const sum   = data.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+  total.textContent = '$' + sum.toFixed(2);
+  if (!data.length) { list.innerHTML = '<div class="empty" style="padding:20px 0;"><div class="ico">💰</div><div>No expenses yet</div></div>'; return; }
+  list.innerHTML = data.map(e => `
+    <div class="expense-card">
+      <div class="expense-cat">${e.category.split(' ')[0]}</div>
+      <div class="expense-body">
+        <div class="expense-desc">${e.desc}</div>
+        <div class="expense-meta">${fmtDate(e.date)} · ${e.author}</div>
+      </div>
+      <div class="expense-amt">$${parseFloat(e.amount).toFixed(2)}</div>
+    </div>`).join('');
+}
+
+// ── RECEIPTS ──
+function uploadReceipt(input) {
+  const file = input.files[0];
+  if (!file) return;
+  pendingReceipt = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('receiptImg').src = e.target.result;
+    document.getElementById('receiptPreview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function confirmReceiptUpload() {
+  if (!pendingReceipt || !activeJobFile) return;
+  document.getElementById('receiptPreview').style.display  = 'none';
+  document.getElementById('uploadProgress').style.display  = 'block';
+
+  try {
+    // Convert to base64
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload  = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(pendingReceipt);
+    });
+
+    const fileName = todayStr() + '_' + empName.split(' ')[0].toLowerCase() + '_' + pendingReceipt.name;
+
+    const res  = await fetch(sheetUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action:   'uploadReceipt',
+        job:      activeJobFile,
+        author:   empName,
+        date:     todayStr(),
+        fileName: fileName,
+        mimeType: pendingReceipt.type,
+        data:     base64
+      })
+    });
+
+    const result = await res.json();
+    document.getElementById('uploadProgress').style.display = 'none';
+
+    if (result && result.url) {
+      const receipt = { job: activeJobFile, fileName, author: empName, date: todayStr(), url: result.url, ts: Date.now() };
+      jobFileData.receipts.unshift(receipt);
+      renderReceipts();
+      toast('✓ Receipt uploaded to Google Drive', 'ok');
+    } else {
+      toast('Upload failed — try again', 'err');
+    }
+  } catch(e) {
+    document.getElementById('uploadProgress').style.display = 'none';
+    toast('Upload error: ' + e.message, 'err');
+  }
+
+  pendingReceipt = null;
+  document.getElementById('receiptInput').value = '';
+}
+
+function cancelReceipt() {
+  pendingReceipt = null;
+  document.getElementById('receiptPreview').style.display = 'none';
+  document.getElementById('receiptInput').value = '';
+}
+
+function renderReceipts() {
+  const list = document.getElementById('receiptList');
+  const data = jobFileData.receipts.filter(r => r.job === activeJobFile);
+  if (!data.length) { list.innerHTML = '<div class="empty" style="padding:20px 0;"><div class="ico">📸</div><div>No receipts yet</div></div>'; return; }
+  list.innerHTML = data.map(r => `
+    <div class="receipt-card">
+      <img class="receipt-thumb" src="${r.url}" onerror="this.style.display='none'">
+      <div class="receipt-body">
+        <div class="receipt-name">${r.fileName || 'Receipt'}</div>
+        <div class="receipt-meta">${fmtDate(r.date)} · ${r.author}</div>
+        <a class="receipt-link" href="${r.url}" target="_blank">↗ View in Google Drive</a>
+      </div>
+    </div>`).join('');
+}
 function setCalView(mode) {
   document.querySelectorAll('.sched-view-btn').forEach(b => b.classList.remove('active'));
   event.target.classList.add('active');
