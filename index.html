@@ -9,7 +9,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Patrick's P&H">
 <link rel="manifest" id="manifestLink">
-<script src="https://cdn.jsdelivr.net/npm/stream-chat@8.57.4/dist/browser/index.umd.js"></script>
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 <title>Patrick's Plumbing & Heating</title>
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -926,9 +925,24 @@ function slugify(name) {
   return name.toLowerCase().replace(/[^a-z0-9]/g, '_');
 }
 
+async function loadStreamSDK() {
+  return new Promise((resolve, reject) => {
+    // Already loaded
+    if (window.StreamChat) { resolve(); return; }
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/stream-chat@8.57.4/dist/browser/index.umd.js';
+    script.onload = () => {
+      console.log('Stream SDK loaded, window.StreamChat:', typeof window.StreamChat);
+      resolve();
+    };
+    script.onerror = () => reject(new Error('Failed to load Stream SDK from CDN'));
+    document.head.appendChild(script);
+  });
+}
+
 async function initChat() {
   if (!empName) { toast('Set up your profile first', 'err'); return; }
-  const ready = document.getElementById('chatReady');
+  const ready    = document.getElementById('chatReady');
   const notReady = document.getElementById('chatNotReady');
 
   if (chatInited && streamClient) {
@@ -941,6 +955,9 @@ async function initChat() {
   notReady.innerHTML = '<div style="font-size:36px;margin-bottom:10px;">💬</div><div style="font-size:14px;color:var(--muted);">Connecting to chat…</div>';
 
   try {
+    // Load Stream SDK dynamically
+    await loadStreamSDK();
+
     // Get token from Apps Script
     const tokenUrl = sheetUrl + '?action=getChatToken&user=' + encodeURIComponent(empName);
     const res  = await fetch(tokenUrl);
