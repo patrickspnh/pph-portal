@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Patrick's P&H">
 <link rel="manifest" id="manifestLink">
+<script src="https://cdn.jsdelivr.net/npm/stream-chat@8/dist/browser/index.umd.js"></script>
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 <title>Patrick's Plumbing & Heating</title>
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -235,7 +236,65 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 .notif-status.on { background: rgba(79,212,160,0.15); color: var(--success); border: 1px solid rgba(79,212,160,0.3); }
 .notif-status.off { background: rgba(90,122,170,0.15); color: var(--muted); border: 1px solid var(--border-soft); }
 
-/* TOAST */
+/* ── CHAT ── */
+.chat-channel-bar { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; align-items:center; }
+.chat-chan-btn { padding:6px 12px; border-radius:100px; border:1px solid var(--border-soft); background:var(--navy-mid); color:var(--muted); font-size:12px; font-weight:700; cursor:pointer; transition:all 0.2s; white-space:nowrap; }
+.chat-chan-btn.active { background:var(--accent); color:var(--navy-deep); border-color:var(--accent); }
+.chat-chan-btn.chat-chan-new { border-color:rgba(79,163,224,0.4); color:var(--accent); }
+.message-list { height:calc(100dvh - 320px); overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-bottom:8px; }
+.msg-wrap { display:flex; gap:8px; align-items:flex-end; }
+.msg-wrap.mine { flex-direction:row-reverse; }
+.msg-avatar { width:28px; height:28px; border-radius:50%; background:var(--navy); border:1px solid var(--border-soft); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--accent); flex-shrink:0; }
+.msg-bubble { max-width:75%; background:var(--navy-mid); border:1px solid var(--border-soft); border-radius:14px 14px 14px 4px; padding:8px 12px; }
+.msg-wrap.mine .msg-bubble { background:var(--accent); color:var(--navy-deep); border-color:var(--accent); border-radius:14px 14px 4px 14px; }
+.msg-name { font-size:10px; font-weight:700; color:var(--muted); margin-bottom:3px; }
+.msg-wrap.mine .msg-name { display:none; }
+.msg-text { font-size:14px; line-height:1.4; }
+.msg-wrap.mine .msg-text { color:var(--navy-deep); }
+.msg-time { font-size:9px; color:var(--muted); margin-top:3px; font-family:'DM Mono',monospace; }
+.msg-wrap.mine .msg-time { color:rgba(13,29,56,0.6); }
+.chat-input-wrap { display:flex; gap:8px; margin-top:10px; position:sticky; bottom:0; background:var(--navy-deep); padding:8px 0 4px; }
+.chat-input-wrap input { flex:1; padding:11px 14px; background:var(--navy-mid); border:1px solid var(--border-soft); color:var(--text); border-radius:100px; font-size:14px; outline:none; }
+.chat-input-wrap input:focus { border-color:var(--accent); }
+.chat-send-btn { width:42px; height:42px; border-radius:50%; background:var(--accent); border:none; color:var(--navy-deep); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:filter 0.2s; }
+.chat-send-btn:hover { filter:brightness(1.1); }
+.dm-picker { background:var(--navy-mid); border:1px solid var(--border-soft); border-radius:14px; padding:14px; margin-bottom:10px; }
+.dm-pick-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:10px; cursor:pointer; transition:background 0.15s; }
+.dm-pick-item:hover { background:var(--navy-dark); }
+.dm-pick-avatar { width:32px; height:32px; border-radius:50%; background:var(--navy); border:1px solid var(--border-soft); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:var(--accent); }
+.dm-pick-name { font-size:13px; font-weight:600; }
+.chat-day-divider { text-align:center; font-size:10px; color:var(--muted); font-family:'DM Mono',monospace; letter-spacing:.08em; text-transform:uppercase; padding:4px 0; }
+
+/* ── SCHEDULE ── */
+.sched-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.sched-nav-btn { background:var(--navy-mid); border:1px solid var(--border-soft); color:var(--text); width:36px; height:36px; border-radius:10px; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
+.sched-nav-btn:hover { border-color:var(--accent); color:var(--accent); }
+.sched-week-label { font-size:14px; font-weight:700; color:var(--text); text-align:center; }
+.sched-day { background:var(--navy-mid); border:1px solid var(--border-soft); border-radius:14px; padding:12px 14px; margin-bottom:10px; }
+.sched-day.today { border-color:var(--accent); }
+.sched-day-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.sched-day-name { font-size:13px; font-weight:700; color:var(--text); }
+.sched-day-date { font-size:11px; color:var(--muted); font-family:'DM Mono',monospace; }
+.sched-add-btn { background:none; border:1px dashed var(--border-soft); color:var(--muted); border-radius:8px; padding:4px 10px; font-size:11px; cursor:pointer; transition:all 0.2s; }
+.sched-add-btn:hover { border-color:var(--accent); color:var(--accent); }
+.sched-shift { display:flex; align-items:center; gap:8px; background:var(--navy-dark); border-radius:10px; padding:8px 10px; margin-bottom:6px; }
+.sched-shift-avatar { width:26px; height:26px; border-radius:50%; background:var(--navy); border:1px solid var(--border-soft); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--accent); flex-shrink:0; }
+.sched-shift-body { flex:1; min-width:0; }
+.sched-shift-name { font-size:12px; font-weight:700; }
+.sched-shift-detail { font-size:11px; color:var(--muted); font-family:'DM Mono',monospace; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sched-shift-del { background:none; border:none; color:var(--muted); font-size:16px; cursor:pointer; padding:2px 4px; transition:color 0.2s; }
+.sched-shift-del:hover { color:var(--danger); }
+.sched-empty { font-size:12px; color:var(--muted); font-style:italic; padding:4px 0; }
+.shift-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:200; display:flex; align-items:flex-end; justify-content:center; padding-bottom:env(safe-area-inset-bottom); }
+.shift-modal { background:var(--navy-mid); border:1px solid var(--border-soft); border-radius:20px 20px 0 0; padding:20px 16px; width:100%; max-width:430px; animation:slideUp 0.25s ease both; }
+@keyframes slideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+.shift-modal-title { font-size:16px; font-weight:800; margin-bottom:14px; }
+
+/* ── NAV ADJUSTMENT for 6 tabs ── */
+.bottom-nav { padding-bottom: env(safe-area-inset-bottom); }
+.nav-item { font-size: 8px; padding: 8px 2px 10px; }
+.nav-item svg { width: 20px; height: 20px; }
+
 .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(16px); background: var(--navy-mid); border: 1px solid var(--border); border-radius: 100px; padding: 10px 20px; font-size: 13px; font-weight: 600; white-space: nowrap; opacity: 0; transition: all 0.3s cubic-bezier(0.22,1,0.36,1); z-index: 999; pointer-events: none; max-width: 88vw; text-align: center; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .toast.ok  { border-color: rgba(79,212,160,0.45); color: var(--success); }
@@ -455,6 +514,92 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
       </div>
 
     </div>
+    <!-- ═══ MESSAGES ═══ -->
+    <div class="view" id="view-messages">
+      <div id="chatNotReady" style="text-align:center;padding:40px 20px;color:var(--muted);">
+        <div style="font-size:36px;margin-bottom:10px;">💬</div>
+        <div style="font-size:14px;">Setting up chat…</div>
+      </div>
+
+      <!-- Channel list / DM selector -->
+      <div id="chatReady" style="display:none;">
+        <div class="chat-channel-bar">
+          <button class="chat-chan-btn active" id="chanBtnGroup" onclick="switchChannel('group')">
+            👥 Team Chat
+          </button>
+          <div id="dmButtons"></div>
+          <button class="chat-chan-btn chat-chan-new" onclick="showDMPicker()">+ DM</button>
+        </div>
+
+        <!-- Message list -->
+        <div id="messageList" class="message-list"></div>
+
+        <!-- DM picker -->
+        <div id="dmPicker" style="display:none;" class="dm-picker">
+          <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Start a Direct Message</div>
+          <div id="dmPickerList"></div>
+          <button onclick="document.getElementById('dmPicker').style.display='none'" style="width:100%;margin-top:8px;padding:8px;background:none;border:1px solid var(--border-soft);color:var(--muted);border-radius:8px;cursor:pointer;font-size:12px;">Cancel</button>
+        </div>
+
+        <!-- Input -->
+        <div class="chat-input-wrap">
+          <input type="text" id="chatInput" placeholder="Message…" onkeydown="if(event.key==='Enter')sendMessage()">
+          <button class="chat-send-btn" onclick="sendMessage()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SCHEDULE ═══ -->
+    <div class="view" id="view-schedule">
+      <div class="sched-hdr">
+        <button class="sched-nav-btn" onclick="changeWeek(-1)">‹</button>
+        <div id="schedWeekLabel" class="sched-week-label">This Week</div>
+        <button class="sched-nav-btn" onclick="changeWeek(1)">›</button>
+      </div>
+
+      <div id="schedDays"></div>
+
+      <!-- Add shift modal -->
+      <div id="shiftModal" style="display:none;" class="shift-modal-overlay">
+        <div class="shift-modal">
+          <div class="shift-modal-title" id="shiftModalTitle">Add Shift</div>
+          <div class="field" style="margin-bottom:10px;">
+            <label>Employee</label>
+            <select id="shiftEmp" style="width:100%;padding:9px 12px;background:var(--navy-dark);border:1px solid var(--border-soft);color:var(--text);border-radius:10px;font-size:14px;">
+              <option value="" disabled selected>— Select employee —</option>
+            </select>
+          </div>
+          <div class="field" style="margin-bottom:10px;">
+            <label>Job / Location</label>
+            <select id="shiftJob" style="width:100%;padding:9px 12px;background:var(--navy-dark);border:1px solid var(--border-soft);color:var(--text);border-radius:10px;font-size:14px;">
+              <option value="" disabled selected>— Select job —</option>
+              <option value="Office / Shop">Office / Shop</option>
+            </select>
+          </div>
+          <div class="field-row" style="margin-bottom:10px;">
+            <div>
+              <label>Start Time</label>
+              <input type="time" id="shiftStart" value="07:00" style="width:100%;padding:9px;background:var(--navy-dark);border:1px solid var(--border-soft);color:var(--text);border-radius:10px;font-size:14px;">
+            </div>
+            <div>
+              <label>End Time</label>
+              <input type="time" id="shiftEnd" value="15:30" style="width:100%;padding:9px;background:var(--navy-dark);border:1px solid var(--border-soft);color:var(--text);border-radius:10px;font-size:14px;">
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:14px;">
+            <label>Notes (optional)</label>
+            <input type="text" id="shiftNotes" placeholder="e.g. Bring pipe fittings" style="width:100%;padding:9px 12px;background:var(--navy-dark);border:1px solid var(--border-soft);color:var(--text);border-radius:10px;font-size:14px;">
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="saveShift()" style="flex:1;padding:12px;background:var(--accent);color:var(--navy-deep);border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;">Save Shift</button>
+            <button onclick="closeShiftModal()" style="flex:1;padding:12px;background:none;border:1px solid var(--border-soft);color:var(--muted);border-radius:10px;font-size:14px;cursor:pointer;">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </main>
 
   <!-- BOTTOM NAV -->
@@ -462,6 +607,15 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
     <button class="nav-item active" id="nav-log" onclick="showTab('log')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       Log
+    </button>
+    <button class="nav-item" id="nav-messages" onclick="showTab('messages')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Chat
+      <span class="nav-badge hidden" id="chatBadge">0</span>
+    </button>
+    <button class="nav-item" id="nav-schedule" onclick="showTab('schedule')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Schedule
     </button>
     <button class="nav-item" id="nav-announcements" onclick="showTab('announcements')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -568,12 +722,14 @@ function installPWA() {
 
 // ─── TABS ────────────────────────────────────────────────────────────
 function showTab(name) {
-  ['log','announcements','history','setup'].forEach(n => {
+  ['log','messages','schedule','announcements','history','setup'].forEach(n => {
     document.getElementById('view-' + n).classList.toggle('active', n === name);
     document.getElementById('nav-' + n).classList.toggle('active', n === name);
   });
-  if (name === 'history') { renderHistory(); fetchHistoryFromSheet(); }
-  if (name === 'announcements') { markAnnouncementsRead(); renderAnnouncements(); }
+  if (name === 'history')      { renderHistory(); fetchHistoryFromSheet(); }
+  if (name === 'announcements'){ markAnnouncementsRead(); renderAnnouncements(); }
+  if (name === 'messages')     { initChat(); }
+  if (name === 'schedule')     { renderSchedule(); }
 }
 
 // ─── PROFILE ─────────────────────────────────────────────────────────
@@ -742,7 +898,396 @@ function onManualHrsChange(val) {
   }
 }
 
-function calcHours() {} // kept for compatibility
+// ─────────────────────────────────────────────────────────────
+// STREAM CHAT
+// ─────────────────────────────────────────────────────────────
+const STREAM_API_KEY = 'qrdqjdn6vc4';
+const STREAM_EMPLOYEES = [
+  'Patrick Carlson','Nick Voelker','Trent Carlson','Donnie Nicely',
+  'Jerry Erickson','William Carlson','Adrian Walli','Morgan Ruohonen','Jess Erickson'
+];
+
+let streamClient  = null;
+let activeChannel = null;
+let chatInited    = false;
+let unreadCount   = 0;
+
+function slugify(name) {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+}
+
+async function initChat() {
+  if (!empName) { toast('Set up your profile first', 'err'); return; }
+  const ready = document.getElementById('chatReady');
+  const notReady = document.getElementById('chatNotReady');
+
+  if (chatInited && streamClient) {
+    ready.style.display = 'block';
+    notReady.style.display = 'none';
+    return;
+  }
+
+  notReady.style.display = 'block';
+  notReady.innerHTML = '<div style="font-size:36px;margin-bottom:10px;">💬</div><div style="font-size:14px;color:var(--muted);">Connecting to chat…</div>';
+
+  try {
+    // Get token from Apps Script
+    const res  = await fetch(sheetUrl + '?action=getChatToken&user=' + encodeURIComponent(empName));
+    const data = await res.json();
+    if (!data.token) throw new Error('No token');
+
+    const userId = slugify(empName);
+    streamClient = StreamChat.StreamChat.getInstance(STREAM_API_KEY);
+    await streamClient.connectUser({ id: userId, name: empName }, data.token);
+
+    // Create/join group channel
+    const groupChannel = streamClient.channel('messaging', 'patricks-pnh-team', {
+      name: "Patrick's P&H — Team Chat",
+      members: STREAM_EMPLOYEES.map(slugify),
+      created_by_id: 'patrick_carlson'
+    });
+    await groupChannel.watch();
+
+    chatInited = true;
+    notReady.style.display = 'none';
+    ready.style.display = 'block';
+
+    activeChannel = groupChannel;
+    await renderMessages(groupChannel);
+    buildDMButtons();
+    listenForMessages();
+
+  } catch(err) {
+    notReady.innerHTML = '<div style="font-size:36px;margin-bottom:10px;">⚠️</div><div style="font-size:13px;color:var(--muted);">Could not connect to chat.<br>Check your connection and try again.</div>';
+    console.error('Chat init error:', err);
+  }
+}
+
+async function renderMessages(channel) {
+  const list = document.getElementById('messageList');
+  list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">Loading…</div>';
+
+  const response = await channel.query({ messages: { limit: 50 } });
+  const messages = response.messages || [];
+
+  let html = '';
+  let lastDate = '';
+  messages.forEach(msg => {
+    const dateStr = new Date(msg.created_at).toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+    if (dateStr !== lastDate) {
+      html += `<div class="chat-day-divider">${dateStr}</div>`;
+      lastDate = dateStr;
+    }
+    const isMine = msg.user.id === slugify(empName);
+    const initials = (msg.user.name || '?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const timeStr = new Date(msg.created_at).toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+    html += `<div class="msg-wrap ${isMine ? 'mine' : ''}">
+      ${!isMine ? `<div class="msg-avatar">${initials}</div>` : ''}
+      <div class="msg-bubble">
+        ${!isMine ? `<div class="msg-name">${msg.user.name}</div>` : ''}
+        <div class="msg-text">${msg.text}</div>
+        <div class="msg-time">${timeStr}</div>
+      </div>
+    </div>`;
+  });
+
+  list.innerHTML = html || '<div class="chat-day-divider">No messages yet — say hi! 👋</div>';
+  list.scrollTop = list.scrollHeight;
+}
+
+function listenForMessages() {
+  if (!streamClient) return;
+  streamClient.on('message.new', event => {
+    if (document.getElementById('view-messages').classList.contains('active')) {
+      renderMessages(activeChannel);
+    } else {
+      unreadCount++;
+      const badge = document.getElementById('chatBadge');
+      badge.textContent = unreadCount;
+      badge.classList.remove('hidden');
+    }
+  });
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const text  = input.value.trim();
+  if (!text || !activeChannel) return;
+  input.value = '';
+  try {
+    await activeChannel.sendMessage({ text });
+    renderMessages(activeChannel);
+  } catch(e) { toast('Could not send message', 'err'); }
+}
+
+async function switchChannel(type, otherUser) {
+  if (!streamClient) return;
+
+  // Update active button
+  document.querySelectorAll('.chat-chan-btn').forEach(b => b.classList.remove('active'));
+
+  if (type === 'group') {
+    document.getElementById('chanBtnGroup').classList.add('active');
+    const ch = streamClient.channel('messaging', 'patricks-pnh-team');
+    await ch.watch();
+    activeChannel = ch;
+  } else {
+    const myId    = slugify(empName);
+    const otherId = slugify(otherUser);
+    const chanId  = [myId, otherId].sort().join('--');
+    const ch = streamClient.channel('messaging', chanId, {
+      members: [myId, otherId],
+      name: otherUser
+    });
+    await ch.watch();
+    activeChannel = ch;
+    const btn = document.getElementById('dmBtn_' + otherId);
+    if (btn) btn.classList.add('active');
+  }
+
+  document.getElementById('dmPicker').style.display = 'none';
+  await renderMessages(activeChannel);
+
+  // Clear unread
+  unreadCount = 0;
+  document.getElementById('chatBadge').classList.add('hidden');
+}
+
+function buildDMButtons() {
+  const wrap = document.getElementById('dmButtons');
+  // Show existing DM channels
+  wrap.innerHTML = '';
+}
+
+function showDMPicker() {
+  const picker = document.getElementById('dmPicker');
+  const list   = document.getElementById('dmPickerList');
+  picker.style.display = 'block';
+  const others = STREAM_EMPLOYEES.filter(n => n !== empName);
+  list.innerHTML = others.map(name => {
+    const initials = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    return `<div class="dm-pick-item" onclick="switchChannel('dm','${name}');document.getElementById('dmPicker').style.display='none';">
+      <div class="dm-pick-avatar">${initials}</div>
+      <div class="dm-pick-name">${name}</div>
+    </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────────────────────
+// SCHEDULE
+// ─────────────────────────────────────────────────────────────
+let scheduleData   = JSON.parse(localStorage.getItem('pph_schedule') || '{}');
+let schedWeekOffset = 0;
+let editingDay     = null;
+
+const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+function getWeekDates(offset) {
+  const today = new Date();
+  const day   = today.getDay();
+  const dates = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - day + i + (offset * 7));
+    d.setHours(0,0,0,0);
+    dates.push(d);
+  }
+  return dates;
+}
+
+function renderSchedule() {
+  const dates   = getWeekDates(schedWeekOffset);
+  const today   = new Date(); today.setHours(0,0,0,0);
+  const startFmt = dates[0].toLocaleDateString('en-US', { month:'short', day:'numeric' });
+  const endFmt   = dates[6].toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+  document.getElementById('schedWeekLabel').textContent = startFmt + ' – ' + endFmt;
+
+  // Build job options in modal
+  const jobSel = document.getElementById('shiftJob');
+  jobSel.innerHTML = '<option value="" disabled selected>— Select job —</option>' +
+    jobs.map(j => `<option value="${j}">${j}</option>`).join('') +
+    '<option value="Office / Shop">Office / Shop</option>' +
+    '<option value="Day Off">🏖 Day Off</option>';
+
+  // Build employee options in modal
+  const empSel = document.getElementById('shiftEmp');
+  empSel.innerHTML = '<option value="" disabled selected>— Select employee —</option>' +
+    STREAM_EMPLOYEES.map(n => `<option value="${n}">${n}</option>`).join('');
+
+  const container = document.getElementById('schedDays');
+  container.innerHTML = dates.map(date => {
+    const key      = date.toISOString().split('T')[0];
+    const isToday  = date.getTime() === today.getTime();
+    const dayName  = DAY_NAMES[date.getDay()];
+    const dayFmt   = date.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    const shifts   = (scheduleData[key] || []);
+    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+
+    const shiftsHtml = shifts.length
+      ? shifts.map((s, i) => {
+          const initials = s.emp.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+          return `<div class="sched-shift">
+            <div class="sched-shift-avatar">${initials}</div>
+            <div class="sched-shift-body">
+              <div class="sched-shift-name">${s.emp}</div>
+              <div class="sched-shift-detail">${s.start}–${s.end} · ${s.job}</div>
+              ${s.notes ? `<div class="sched-shift-detail" style="color:var(--text-soft);">${s.notes}</div>` : ''}
+            </div>
+            <button class="sched-shift-del" onclick="deleteShift('${key}',${i})">×</button>
+          </div>`;
+        }).join('')
+      : `<div class="sched-empty">${isWeekend ? 'Weekend' : 'No shifts scheduled'}</div>`;
+
+    return `<div class="sched-day ${isToday ? 'today' : ''}">
+      <div class="sched-day-hdr">
+        <div>
+          <div class="sched-day-name">${dayName} ${isToday ? '· Today' : ''}</div>
+          <div class="sched-day-date">${dayFmt}</div>
+        </div>
+        <button class="sched-add-btn" onclick="openShiftModal('${key}')">+ Add</button>
+      </div>
+      ${shiftsHtml}
+    </div>`;
+  }).join('');
+
+  // Fetch from sheet and merge
+  fetchScheduleFromSheet();
+}
+
+function changeWeek(dir) {
+  schedWeekOffset += dir;
+  renderSchedule();
+}
+
+function openShiftModal(dateKey) {
+  editingDay = dateKey;
+  const date = new Date(dateKey + 'T12:00');
+  document.getElementById('shiftModalTitle').textContent =
+    'Add Shift — ' + date.toLocaleDateString('en-US', { weekday:'long', month:'short', day:'numeric' });
+  document.getElementById('shiftEmp').value   = empName || '';
+  document.getElementById('shiftJob').value   = '';
+  document.getElementById('shiftStart').value = '07:00';
+  document.getElementById('shiftEnd').value   = '15:30';
+  document.getElementById('shiftNotes').value = '';
+  document.getElementById('shiftModal').style.display = 'flex';
+}
+
+function closeShiftModal() {
+  document.getElementById('shiftModal').style.display = 'none';
+  editingDay = null;
+}
+
+async function saveShift() {
+  const emp   = document.getElementById('shiftEmp').value;
+  const job   = document.getElementById('shiftJob').value;
+  const start = document.getElementById('shiftStart').value;
+  const end   = document.getElementById('shiftEnd').value;
+  const notes = document.getElementById('shiftNotes').value.trim();
+
+  if (!emp)   return toast('Select an employee', 'err');
+  if (!job)   return toast('Select a job', 'err');
+  if (!start || !end) return toast('Set start and end times', 'err');
+
+  const shift = { emp, job, start, end, notes, addedBy: empName };
+
+  if (!scheduleData[editingDay]) scheduleData[editingDay] = [];
+  scheduleData[editingDay].push(shift);
+  localStorage.setItem('pph_schedule', JSON.stringify(scheduleData));
+
+  // Sync to sheet
+  if (sheetUrl) {
+    fetch(sheetUrl, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'saveShift', date: editingDay, shift })
+    }).catch(() => {});
+  }
+
+  closeShiftModal();
+  renderSchedule();
+  toast('✓ Shift saved', 'ok');
+}
+
+function deleteShift(dateKey, idx) {
+  if (!scheduleData[dateKey]) return;
+  const shift = scheduleData[dateKey][idx];
+  scheduleData[dateKey].splice(idx, 1);
+  localStorage.setItem('pph_schedule', JSON.stringify(scheduleData));
+
+  if (sheetUrl && shift) {
+    fetch(sheetUrl, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'deleteShift', date: dateKey, idx, shift })
+    }).catch(() => {});
+  }
+
+  renderSchedule();
+  toast('Shift removed', 'ok');
+}
+
+async function fetchScheduleFromSheet() {
+  if (!sheetUrl) return;
+  try {
+    const dates  = getWeekDates(schedWeekOffset);
+    const start  = dates[0].toISOString().split('T')[0];
+    const end    = dates[6].toISOString().split('T')[0];
+    const url    = sheetUrl + '?action=getSchedule&start=' + start + '&end=' + end;
+    const res    = await fetch(url);
+    const data   = await res.json();
+    if (data && data.schedule) {
+      // Merge sheet schedule with local
+      Object.keys(data.schedule).forEach(key => {
+        scheduleData[key] = data.schedule[key];
+      });
+      localStorage.setItem('pph_schedule', JSON.stringify(scheduleData));
+      renderScheduleLocal();
+    }
+  } catch(e) {}
+}
+
+function renderScheduleLocal() {
+  // Re-render without fetching again
+  const dates   = getWeekDates(schedWeekOffset);
+  const today   = new Date(); today.setHours(0,0,0,0);
+  const container = document.getElementById('schedDays');
+  if (!container) return;
+
+  container.innerHTML = dates.map(date => {
+    const key      = date.toISOString().split('T')[0];
+    const isToday  = date.getTime() === today.getTime();
+    const dayName  = DAY_NAMES[date.getDay()];
+    const dayFmt   = date.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    const shifts   = (scheduleData[key] || []);
+    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+
+    const shiftsHtml = shifts.length
+      ? shifts.map((s, i) => {
+          const initials = s.emp.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+          return `<div class="sched-shift">
+            <div class="sched-shift-avatar">${initials}</div>
+            <div class="sched-shift-body">
+              <div class="sched-shift-name">${s.emp}</div>
+              <div class="sched-shift-detail">${s.start}–${s.end} · ${s.job}</div>
+              ${s.notes ? `<div class="sched-shift-detail" style="color:var(--text-soft);">${s.notes}</div>` : ''}
+            </div>
+            <button class="sched-shift-del" onclick="deleteShift('${key}',${i})">×</button>
+          </div>`;
+        }).join('')
+      : `<div class="sched-empty">${isWeekend ? 'Weekend' : 'No shifts scheduled'}</div>`;
+
+    return `<div class="sched-day ${isToday ? 'today' : ''}">
+      <div class="sched-day-hdr">
+        <div>
+          <div class="sched-day-name">${dayName} ${isToday ? '· Today' : ''}</div>
+          <div class="sched-day-date">${dayFmt}</div>
+        </div>
+        <button class="sched-add-btn" onclick="openShiftModal('${key}')">+ Add</button>
+      </div>
+      ${shiftsHtml}
+    </div>`;
+  }).join('');
+}
 
 // ─── SUBMIT ──────────────────────────────────────────────────────────
 async function submitEntry() {
