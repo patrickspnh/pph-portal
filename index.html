@@ -266,6 +266,8 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 .chat-day-divider { text-align:center; font-size:10px; color:var(--muted); font-family:'DM Mono',monospace; letter-spacing:.08em; text-transform:uppercase; padding:4px 0; }
 
 /* ── SCHEDULE ── */
+.sched-view-btn { flex:1; padding:7px 4px; border-radius:10px; border:1px solid var(--border-soft); background:var(--navy-mid); color:var(--muted); font-size:12px; font-weight:700; cursor:pointer; transition:all 0.2s; text-align:center; }
+.sched-view-btn.active { background:var(--accent); color:var(--navy-deep); border-color:var(--accent); }
 .sched-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
 .sched-nav-btn { background:var(--navy-mid); border:1px solid var(--border-soft); color:var(--text); width:36px; height:36px; border-radius:10px; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
 .sched-nav-btn:hover { border-color:var(--accent); color:var(--accent); }
@@ -553,6 +555,14 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 
     <!-- ═══ SCHEDULE ═══ -->
     <div class="view" id="view-schedule">
+      <!-- View toggle -->
+      <div style="display:flex;gap:5px;margin-bottom:12px;">
+        <button class="sched-view-btn active" id="viewBtn-day"    onclick="setSchedView('day')">Day</button>
+        <button class="sched-view-btn"         id="viewBtn-week"   onclick="setSchedView('week')">Week</button>
+        <button class="sched-view-btn"         id="viewBtn-month"  onclick="setSchedView('month')">Month</button>
+        <button class="sched-view-btn"         id="viewBtn-year"   onclick="setSchedView('year')">Year</button>
+      </div>
+
       <div class="sched-hdr">
         <button class="sched-nav-btn" onclick="changeWeek(-1)">‹</button>
         <div id="schedWeekLabel" class="sched-week-label">This Week</div>
@@ -932,9 +942,15 @@ async function initChat() {
 
   try {
     // Get token from Apps Script
-    const res  = await fetch(sheetUrl + '?action=getChatToken&user=' + encodeURIComponent(empName));
-    const data = await res.json();
-    if (!data.token) throw new Error('No token');
+    const tokenUrl = sheetUrl + '?action=getChatToken&user=' + encodeURIComponent(empName);
+    Logger && Logger.log && Logger.log('Fetching token from: ' + tokenUrl);
+    const res  = await fetch(tokenUrl);
+    const text = await res.text();
+    console.log('Chat token response:', text);
+    let data;
+    try { data = JSON.parse(text); } catch(e) { throw new Error('Bad response: ' + text.slice(0,100)); }
+    if (data.error) throw new Error('Server error: ' + data.error);
+    if (!data.token) throw new Error('No token in response: ' + text.slice(0,100));
 
     const userId = slugify(empName);
     streamClient = StreamChat.StreamChat.getInstance(STREAM_API_KEY);
@@ -958,7 +974,11 @@ async function initChat() {
     listenForMessages();
 
   } catch(err) {
-    notReady.innerHTML = '<div style="font-size:36px;margin-bottom:10px;">⚠️</div><div style="font-size:13px;color:var(--muted);">Could not connect to chat.<br>Check your connection and try again.</div>';
+    notReady.innerHTML = `<div style="font-size:28px;margin-bottom:10px;">⚠️</div>
+      <div style="font-size:12px;color:var(--muted);padding:0 10px;">
+        Chat error: ${err.message}<br><br>
+        <button onclick="initChat()" style="background:var(--accent);color:var(--navy-deep);border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;">Retry</button>
+      </div>`;
     console.error('Chat init error:', err);
   }
 }
