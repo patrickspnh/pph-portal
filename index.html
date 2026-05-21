@@ -316,6 +316,23 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 .nav-item { font-size: 8px; padding: 8px 2px 10px; }
 .nav-item svg { width: 20px; height: 20px; }
 
+/* ── HOME SCREEN ── */
+.home-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.home-tile { background:var(--navy-mid); border:1px solid var(--border-soft); border-radius:16px; padding:16px 8px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; transition:all 0.15s; position:relative; border-top:3px solid var(--tile-color); }
+.home-tile:active { transform:scale(0.96); }
+.home-tile-icon { font-size:28px; line-height:1; }
+.home-tile-label { font-size:12px; font-weight:700; color:var(--text); text-align:center; }
+.home-tile-badge { position:absolute; top:8px; right:8px; background:var(--danger); color:white; border-radius:100px; font-size:9px; font-weight:800; padding:2px 5px; }
+
+/* ── QUICK ACTIONS ── */
+.quick-actions { margin-bottom:12px; }
+.qa-title { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+.qa-row { display:flex; gap:8px; }
+.qa-btn { flex:1; background:var(--navy-mid); border:1px solid var(--border-soft); border-radius:12px; padding:12px 6px; display:flex; flex-direction:column; align-items:center; gap:5px; cursor:pointer; transition:all 0.15s; }
+.qa-btn:active { transform:scale(0.96); border-color:var(--accent); }
+.qa-icon { font-size:22px; }
+.qa-label { font-size:10px; font-weight:700; color:var(--text-soft); text-align:center; }
+
 /* ── JOBS ── */
 .job-list-card { background:var(--navy-mid); border:1px solid var(--border-soft); border-radius:14px; padding:14px; margin-bottom:10px; cursor:pointer; transition:all 0.15s; }
 .job-list-card:hover { border-color:var(--accent); background:var(--navy-light); }
@@ -370,7 +387,42 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
   </div>
 
   <main>
-    <!-- ═══ LOG HOURS ═══ -->
+    <!-- ═══ HOME ═══ -->
+    <div class="view active" id="view-home">
+      <div style="margin-bottom:16px;">
+        <div id="pbName2" style="font-size:22px;font-weight:800;">Good morning 👋</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;" id="homeDate"></div>
+      </div>
+      <div class="home-grid">
+        <div class="home-tile" onclick="showTab('log')" style="--tile-color:#4fa3e0;">
+          <div class="home-tile-icon">⏱</div>
+          <div class="home-tile-label">Timesheet</div>
+        </div>
+        <div class="home-tile" onclick="showTab('messages')" style="--tile-color:#e8c96a;">
+          <div class="home-tile-icon">💬</div>
+          <div class="home-tile-label">Chat</div>
+          <span class="home-tile-badge hidden" id="homeChatBadge">0</span>
+        </div>
+        <div class="home-tile" onclick="showTab('jobs')" style="--tile-color:#4fd4a0;">
+          <div class="home-tile-icon">📁</div>
+          <div class="home-tile-label">Jobs</div>
+        </div>
+        <div class="home-tile" onclick="showTab('schedule')" style="--tile-color:#a78bfa;">
+          <div class="home-tile-icon">📅</div>
+          <div class="home-tile-label">Schedule</div>
+        </div>
+        <div class="home-tile" onclick="showTab('history')" style="--tile-color:#fb923c;">
+          <div class="home-tile-icon">📋</div>
+          <div class="home-tile-label">History</div>
+        </div>
+        <div class="home-tile" onclick="showTab('setup')" style="--tile-color:#94a3b8;">
+          <div class="home-tile-icon">⚙️</div>
+          <div class="home-tile-label">Settings</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ LOG HOURS / TIMESHEET ═══ -->
     <div class="view active" id="view-log">
       <div id="profileSetupCard" style="display:none;">
         <div class="card">
@@ -493,18 +545,29 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
           </div>
         </div>
 
+        <!-- Quick action buttons -->
+        <div class="quick-actions">
+          <div class="qa-title">Quick Actions</div>
+          <div class="qa-row">
+            <button class="qa-btn" onclick="showTab('jobs');setTimeout(()=>showJobTab('receipts'),100)">
+              <span class="qa-icon">📸</span>
+              <span class="qa-label">Receipt</span>
+            </button>
+            <button class="qa-btn" onclick="showTab('jobs');setTimeout(()=>showJobTab('report'),100)">
+              <span class="qa-icon">📋</span>
+              <span class="qa-label">Daily Report</span>
+            </button>
+            <button class="qa-btn" onclick="showTab('schedule')">
+              <span class="qa-icon">📅</span>
+              <span class="qa-label">Schedule</span>
+            </button>
+          </div>
+        </div>
+
         <button class="btn-submit" id="submitBtn" onclick="submitEntry()">
           <span id="btnLabel">Submit Hours</span>
         </button>
       </div>
-    </div>
-
-    <!-- ═══ ANNOUNCEMENTS ═══ -->
-    <div class="view" id="view-announcements">
-      <div class="ann-hdr">
-        <div class="ann-title">Announcements</div>
-      </div>
-      <div id="annList"></div>
     </div>
 
     <!-- ═══ HISTORY ═══ -->
@@ -761,35 +824,34 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 
   <!-- BOTTOM NAV -->
   <nav class="bottom-nav">
-    <button class="nav-item active" id="nav-log" onclick="showTab('log')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      Log
+    <button class="nav-item" id="nav-home" onclick="showTab('home')" class="nav-item active" style="">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Home
     </button>
-    <button class="nav-item" id="nav-jobs" onclick="showTab('jobs')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-      Jobs
+    <button class="nav-item" id="nav-log" onclick="showTab('log')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Timesheet
     </button>
     <button class="nav-item" id="nav-messages" onclick="showTab('messages')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       Chat
       <span class="nav-badge hidden" id="chatBadge">0</span>
     </button>
+    <button class="nav-item" id="nav-jobs" onclick="showTab('jobs')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      Jobs
+    </button>
     <button class="nav-item" id="nav-schedule" onclick="showTab('schedule')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       Schedule
     </button>
-    <button class="nav-item" id="nav-announcements" onclick="showTab('announcements')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-      News
-      <span class="nav-badge hidden" id="annBadge">0</span>
-    </button>
     <button class="nav-item" id="nav-history" onclick="showTab('history')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       History
     </button>
     <button class="nav-item" id="nav-setup" onclick="showTab('setup')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M20 12h-2M6 12H4m14.07 7.07l-1.41-1.41M4.93 19.07l1.41-1.41M12 20v-2M12 4V2"/></svg>
-      Setup
+      ⚙️
     </button>
   </nav>
 </div>
@@ -845,6 +907,7 @@ let notifToken    = localStorage.getItem('pph_notif_token') || '';
   if (empName) {
     showLogForm(true);
     updateProfileBanner();
+    updateHomeScreen();
     if (lastJob) selectJob(lastJob);
     else updatePayTypeBadge();
   } else {
@@ -882,14 +945,16 @@ function installPWA() {
 
 // ─── TABS ────────────────────────────────────────────────────────────
 function showTab(name) {
-  ['log','jobs','messages','schedule','announcements','history','setup'].forEach(n => {
-    document.getElementById('view-' + n).classList.toggle('active', n === name);
-    document.getElementById('nav-' + n).classList.toggle('active', n === name);
+  ['home','log','messages','schedule','jobs','history','setup'].forEach(n => {
+    const view = document.getElementById('view-' + n);
+    const nav  = document.getElementById('nav-' + n);
+    if (view) view.classList.toggle('active', n === name);
+    if (nav)  nav.classList.toggle('active', n === name);
   });
-  if (name === 'history')      { renderHistory(); fetchHistoryFromSheet(); }
-  if (name === 'announcements'){ markAnnouncementsRead(); renderAnnouncements(); }
-  if (name === 'messages')     { initChat(); }
-  if (name === 'jobs')         { initJobsTab(); fetchJobsFromSheet(); }
+  if (name === 'history')  { renderHistory(); fetchHistoryFromSheet(); }
+  if (name === 'messages') { initChat(); }
+  if (name === 'jobs')     { initJobsTab(); fetchJobsFromSheet(); }
+  if (name === 'home')     { updateHomeScreen(); }
 }
 
 // ─── PROFILE ─────────────────────────────────────────────────────────
@@ -2104,7 +2169,25 @@ function updateNotifBanner() {
   if (banner) banner.style.display = 'none';
 }
 
-// ─── NOTIFICATIONS (OneSignal) ───────────────────────────────────────
+// ─── HOME SCREEN ─────────────────────────────────────────────────────
+function updateHomeScreen() {
+  // Greeting
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const nameEl = document.getElementById('pbName2');
+  if (nameEl) nameEl.textContent = greeting + (empName ? ', ' + empName.split(' ')[0] : '') + ' 👋';
+
+  // Date
+  const dateEl = document.getElementById('homeDate');
+  if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+
+  // Chat unread badge on home tile
+  const homeBadge = document.getElementById('homeChatBadge');
+  if (homeBadge && unreadCount > 0) {
+    homeBadge.textContent = unreadCount;
+    homeBadge.classList.remove('hidden');
+  }
+}
 function initOneSignal() {
   if (typeof OneSignal === 'undefined' || !ONESIGNAL_APP_ID || ONESIGNAL_APP_ID === 'YOUR_ONESIGNAL_APP_ID') return;
   window.OneSignalDeferred = window.OneSignalDeferred || [];
