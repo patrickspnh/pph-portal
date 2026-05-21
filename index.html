@@ -660,7 +660,9 @@ const PAY_LABELS = {
 
 // ─── STATE ──────────────────────────────────────────────────────────
 let entries     = JSON.parse(localStorage.getItem('pph_entries')  || '[]');
-let sheetUrl    = localStorage.getItem('pph_url') || 'https://script.google.com/macros/s/AKfycbzU_nB3itCROlmyyocqyZQzYH83VPIyEpywIlZYJPsYDshwCu0WGyB95ia562D5G2x5/exec';
+// URL is ALWAYS this — hardcoded, never changes
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzU_nB3itCROlmyyocqyZQzYH83VPIyEpywIlZYJPsYDshwCu0WGyB95ia562D5G2x5/exec';
+let sheetUrl = SHEET_URL;
 let empName     = localStorage.getItem('pph_name')    || '';
 let empEmail    = localStorage.getItem('pph_email')   || '';
 let jobs        = JSON.parse(localStorage.getItem('pph_jobs')     || JSON.stringify(DEFAULT_JOBS));
@@ -674,15 +676,11 @@ let notifToken    = localStorage.getItem('pph_notif_token') || '';
 // ─── BOOT ───────────────────────────────────────────────────────────
 (function init() {
   document.getElementById('dateIn').value = todayStr();
-  // URL is baked in — always connected
-  if (sheetUrl) {
-    const urlInput = document.getElementById('sheetUrl');
-    if (urlInput) urlInput.value = sheetUrl;
-    localStorage.setItem('pph_url', sheetUrl);
-    setConnected(true);
-    // Also call after short delay in case DOM isn't fully ready
-    setTimeout(() => setConnected(true), 300);
-  }
+  // Always connected — URL is hardcoded
+  const urlInput = document.getElementById('sheetUrl');
+  if (urlInput) urlInput.value = sheetUrl;
+  setConnected(true);
+  setTimeout(() => setConnected(true), 500);
   buildJobDropdown();
   renderJobManager();
   renderHistory();
@@ -1245,6 +1243,10 @@ function changeWeek(dir) {
   renderSchedule();
 }
 
+function openShiftModal(dateKey) {
+  openShiftModalWithTime(dateKey, '07:00');
+}
+
 function openShiftModalWithTime(dateKey, startTime) {
   editingDay = dateKey;
   const date = new Date(dateKey + 'T12:00');
@@ -1257,17 +1259,6 @@ function openShiftModalWithTime(dateKey, startTime) {
   const [h, m] = startTime.split(':').map(Number);
   const endH = Math.min(h + 1, 23);
   document.getElementById('shiftEnd').value = String(endH).padStart(2,'0') + ':' + String(m).padStart(2,'0');
-  document.getElementById('shiftNotes').value = '';
-  document.getElementById('shiftModal').style.display = 'flex';
-}
-  editingDay = dateKey;
-  const date = new Date(dateKey + 'T12:00');
-  document.getElementById('shiftModalTitle').textContent =
-    'Add Shift — ' + date.toLocaleDateString('en-US', { weekday:'long', month:'short', day:'numeric' });
-  document.getElementById('shiftEmp').value   = empName || '';
-  document.getElementById('shiftJob').value   = '';
-  document.getElementById('shiftStart').value = '07:00';
-  document.getElementById('shiftEnd').value   = '15:30';
   document.getElementById('shiftNotes').value = '';
   document.getElementById('shiftModal').style.display = 'flex';
 }
