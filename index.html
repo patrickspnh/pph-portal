@@ -908,193 +908,117 @@ function onManualHrsChange(val) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// STREAM CHAT
+// CHAT — Built on Google Sheets, no external SDK needed
 // ─────────────────────────────────────────────────────────────
-const STREAM_API_KEY = 'qrdqjdn6vc4';
-const STREAM_EMPLOYEES = [
+const CHAT_EMPLOYEES = [
   'Patrick Carlson','Nick Voelker','Trent Carlson','Donnie Nicely',
   'Jerry Erickson','William Carlson','Adrian Walli','Morgan Ruohonen','Jess Erickson'
 ];
 
-let streamClient  = null;
-let activeChannel = null;
-let chatInited    = false;
-let unreadCount   = 0;
-
-function slugify(name) {
-  return name.toLowerCase().replace(/[^a-z0-9]/g, '_');
-}
-
-async function loadStreamSDK() {
-  return new Promise((resolve, reject) => {
-    // Already loaded
-    if (window.StreamChat) { resolve(); return; }
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/stream-chat@8.57.4/dist/browser/index.umd.js';
-    script.onload = () => {
-      console.log('Stream SDK loaded, window.StreamChat:', typeof window.StreamChat);
-      resolve();
-    };
-    script.onerror = () => reject(new Error('Failed to load Stream SDK from CDN'));
-    document.head.appendChild(script);
-  });
-}
+let activeChatChannel = 'group';
+let chatMessages      = [];
+let chatPollTimer     = null;
+let lastMessageTime   = 0;
 
 async function initChat() {
   if (!empName) { toast('Set up your profile first', 'err'); return; }
   const ready    = document.getElementById('chatReady');
   const notReady = document.getElementById('chatNotReady');
-
-  if (chatInited && streamClient) {
-    ready.style.display = 'block';
-    notReady.style.display = 'none';
-    return;
-  }
-
-  notReady.style.display = 'block';
-  notReady.innerHTML = '<div style="font-size:36px;margin-bottom:10px;">💬</div><div style="font-size:14px;color:var(--muted);">Connecting to chat…</div>';
-
-  try {
-    // Load Stream SDK dynamically
-    await loadStreamSDK();
-
-    // Get token from Apps Script
-    const tokenUrl = sheetUrl + '?action=getChatToken&user=' + encodeURIComponent(empName);
-    const res  = await fetch(tokenUrl);
-    const text = await res.text();
-    console.log('Chat token response:', text);
-    let data;
-    try { data = JSON.parse(text); } catch(e) { throw new Error('Bad response: ' + text.slice(0,100)); }
-    if (data.error) throw new Error('Server error: ' + data.error);
-    if (!data.token) throw new Error('No token in response: ' + text.slice(0,100));
-
-    const userId = data.userId || slugify(empName);
-    // Stream Chat v8 exports as window.StreamChat.StreamChat
-    const SC = window.StreamChat && (window.StreamChat.StreamChat || window.StreamChat);
-    if (!SC || !SC.getInstance) throw new Error('Stream SDK not loaded — refresh and try again');
-    streamClient = SC.getInstance(STREAM_API_KEY);
-    await streamClient.connectUser({ id: userId, name: empName }, data.token);
-
-    // Create/join group channel
-    const groupChannel = streamClient.channel('messaging', 'patricks-pnh-team', {
-      name: "Patrick's P&H — Team Chat",
-      members: STREAM_EMPLOYEES.map(slugify),
-      created_by_id: 'patrick_carlson'
-    });
-    await groupChannel.watch();
-
-    chatInited = true;
-    notReady.style.display = 'none';
-    ready.style.display = 'block';
-
-    activeChannel = groupChannel;
-    await renderMessages(groupChannel);
-    buildDMButtons();
-    listenForMessages();
-
-  } catch(err) {
-    notReady.innerHTML = `<div style="font-size:28px;margin-bottom:10px;">⚠️</div>
-      <div style="font-size:12px;color:var(--muted);padding:0 10px;">
-        Chat error: ${err.message}<br><br>
-        <button onclick="initChat()" style="background:var(--accent);color:var(--navy-deep);border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;">Retry</button>
-      </div>`;
-    console.error('Chat init error:', err);
-  }
+  notReady.style.display = 'none';
+  ready.style.display    = 'block';
+  buildDMButtons();
+  await loadMessages();
+  startChatPoll();
 }
 
-async function renderMessages(channel) {
+async function loadMessages() {
+  if (!sheetUrl) return;
+  try {
+    const url  = sheetUrl + '?action=getMessages&channel=' + encodeURIComponent(activeChatChannel);
+    const res  = await fetch(url);
+    const data = await res.json();
+    if (data && data.messages) {
+      chatMessages = data.messages;
+      lastMessageTime = chatMessages.length ? chatMessages[chatMessages.length-1].ts : 0;
+      renderMessages();
+    }
+  } catch(e) { console.log('Chat load error:', e); }
+}
+
+function renderMessages() {
   const list = document.getElementById('messageList');
-  list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">Loading…</div>';
-
-  const response = await channel.query({ messages: { limit: 50 } });
-  const messages = response.messages || [];
-
+  if (!chatMessages.length) {
+    list.innerHTML = '<div class="chat-day-divider">No messages yet — say hi! 👋</div>';
+    return;
+  }
   let html = '';
   let lastDate = '';
-  messages.forEach(msg => {
-    const dateStr = new Date(msg.created_at).toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
-    if (dateStr !== lastDate) {
-      html += `<div class="chat-day-divider">${dateStr}</div>`;
-      lastDate = dateStr;
-    }
-    const isMine = msg.user.id === slugify(empName);
-    const initials = (msg.user.name || '?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    const timeStr = new Date(msg.created_at).toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+  chatMessages.forEach(msg => {
+    const d       = new Date(msg.ts);
+    const dateStr = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+    if (dateStr !== lastDate) { html += `<div class="chat-day-divider">${dateStr}</div>`; lastDate = dateStr; }
+    const isMine  = msg.author === empName;
+    const initials = (msg.author||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const timeStr  = d.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
     html += `<div class="msg-wrap ${isMine ? 'mine' : ''}">
       ${!isMine ? `<div class="msg-avatar">${initials}</div>` : ''}
       <div class="msg-bubble">
-        ${!isMine ? `<div class="msg-name">${msg.user.name}</div>` : ''}
+        ${!isMine ? `<div class="msg-name">${msg.author}</div>` : ''}
         <div class="msg-text">${msg.text}</div>
         <div class="msg-time">${timeStr}</div>
       </div>
     </div>`;
   });
-
-  list.innerHTML = html || '<div class="chat-day-divider">No messages yet — say hi! 👋</div>';
+  list.innerHTML = html;
   list.scrollTop = list.scrollHeight;
-}
-
-function listenForMessages() {
-  if (!streamClient) return;
-  streamClient.on('message.new', event => {
-    if (document.getElementById('view-messages').classList.contains('active')) {
-      renderMessages(activeChannel);
-    } else {
-      unreadCount++;
-      const badge = document.getElementById('chatBadge');
-      badge.textContent = unreadCount;
-      badge.classList.remove('hidden');
-    }
-  });
 }
 
 async function sendMessage() {
   const input = document.getElementById('chatInput');
   const text  = input.value.trim();
-  if (!text || !activeChannel) return;
+  if (!text || !sheetUrl || !empName) return;
   input.value = '';
   try {
-    await activeChannel.sendMessage({ text });
-    renderMessages(activeChannel);
+    await fetch(sheetUrl, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'sendMessage', channel: activeChatChannel, author: empName, text, ts: Date.now() })
+    });
+    // Optimistically add message locally
+    chatMessages.push({ channel: activeChatChannel, author: empName, text, ts: Date.now() });
+    renderMessages();
+    setTimeout(loadMessages, 1500);
   } catch(e) { toast('Could not send message', 'err'); }
 }
 
+function startChatPoll() {
+  if (chatPollTimer) clearInterval(chatPollTimer);
+  chatPollTimer = setInterval(() => {
+    if (document.getElementById('view-messages').classList.contains('active')) {
+      loadMessages();
+    }
+  }, 8000); // Poll every 8 seconds
+}
+
 async function switchChannel(type, otherUser) {
-  if (!streamClient) return;
-
-  // Update active button
   document.querySelectorAll('.chat-chan-btn').forEach(b => b.classList.remove('active'));
-
   if (type === 'group') {
+    activeChatChannel = 'group';
     document.getElementById('chanBtnGroup').classList.add('active');
-    const ch = streamClient.channel('messaging', 'patricks-pnh-team');
-    await ch.watch();
-    activeChannel = ch;
   } else {
-    const myId    = slugify(empName);
-    const otherId = slugify(otherUser);
-    const chanId  = [myId, otherId].sort().join('--');
-    const ch = streamClient.channel('messaging', chanId, {
-      members: [myId, otherId],
-      name: otherUser
-    });
-    await ch.watch();
-    activeChannel = ch;
-    const btn = document.getElementById('dmBtn_' + otherId);
+    const names = [empName, otherUser].sort();
+    activeChatChannel = 'dm_' + names.join('_').toLowerCase().replace(/[^a-z0-9_]/g,'');
+    const btn = document.getElementById('dmBtn_' + otherUser.replace(/\s/g,'_'));
     if (btn) btn.classList.add('active');
   }
-
   document.getElementById('dmPicker').style.display = 'none';
-  await renderMessages(activeChannel);
-
-  // Clear unread
-  unreadCount = 0;
-  document.getElementById('chatBadge').classList.add('hidden');
+  chatMessages = [];
+  renderMessages();
+  await loadMessages();
 }
 
 function buildDMButtons() {
   const wrap = document.getElementById('dmButtons');
-  // Show existing DM channels
   wrap.innerHTML = '';
 }
 
@@ -1102,7 +1026,7 @@ function showDMPicker() {
   const picker = document.getElementById('dmPicker');
   const list   = document.getElementById('dmPickerList');
   picker.style.display = 'block';
-  const others = STREAM_EMPLOYEES.filter(n => n !== empName);
+  const others = CHAT_EMPLOYEES.filter(n => n !== empName);
   list.innerHTML = others.map(name => {
     const initials = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
     return `<div class="dm-pick-item" onclick="switchChannel('dm','${name}');document.getElementById('dmPicker').style.display='none';">
