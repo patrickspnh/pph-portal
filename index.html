@@ -2203,9 +2203,10 @@ async function fetchJobsFromSheet() {
     const res  = await fetch(sheetUrl + '?action=getJobs');
     const data = await res.json();
     if (data && data.jobs && data.jobs.length) {
-      jobs = [...new Set([...data.jobs, ...jobs])];
+      // Sheet is authoritative — replace local list entirely
+      jobs = data.jobs;
       if (data.payTypes) {
-        jobPayTypes = { ...jobPayTypes, ...data.payTypes };
+        jobPayTypes = { ...data.payTypes };
         localStorage.setItem('pph_jobpay', JSON.stringify(jobPayTypes));
       }
       localStorage.setItem('pph_jobs', JSON.stringify(jobs));
