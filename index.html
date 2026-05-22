@@ -250,10 +250,8 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 .chat-chan-btn.active { background:var(--accent); color:var(--navy-deep); border-color:var(--accent); }
 .chat-chan-btn.chat-chan-new { border-color:rgba(79,163,224,0.4); color:var(--accent); }
 .message-list {
-  /* No fixed height: messages take only as much vertical space as they need,
-     and the input sits directly below them. A max-height prevents long
-     conversations from running off-screen — overflow scrolls within the list. */
-  max-height:calc(100dvh - 200px);
+  /* Sits below the sticky input. Takes whatever space remains. */
+  max-height:calc(100dvh - 220px);
   min-height:60px;
   overflow-y:auto;
   display:flex;
@@ -276,7 +274,17 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 .msg-status.sending { color:rgba(13,29,56,0.5); }
 .msg-status.failed  { color:#ef4444; background:rgba(239,68,68,0.12); cursor:pointer; }
 .msg-status.failed:hover { background:rgba(239,68,68,0.22); }
-.chat-input-wrap { display:flex; gap:8px; margin-top:8px; padding:8px 0 4px; background:var(--navy-deep); align-items:center; }
+/* Input wrap — pinned at the TOP of the conversation, just below the header.
+   sticky + top:0 keeps it visible as messages scroll below it. */
+.chat-input-wrap {
+  display:flex; gap:8px;
+  padding:8px 0;
+  background:var(--navy-deep);
+  align-items:center;
+  position:sticky; top:0; z-index:40;
+  border-bottom:1px solid var(--border-soft);
+  margin-bottom:6px;
+}
 .chat-input-wrap input { flex:1; padding:11px 14px; background:var(--navy-mid); border:1px solid var(--border-soft); color:var(--text); border-radius:100px; font-size:14px; outline:none; }
 .chat-input-wrap input:focus { border-color:var(--accent); }
 .chat-attach-btn { width:38px; height:38px; border-radius:50%; background:transparent; border:1px solid var(--border-soft); color:var(--muted); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:all 0.15s; padding:0; }
@@ -284,20 +292,15 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 .chat-send-btn { width:42px; height:42px; border-radius:50%; background:var(--accent); border:none; color:var(--navy-deep); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:filter 0.2s; }
 .chat-send-btn:hover { filter:brightness(1.1); }
 
-/* Attach menu — small popover above input */
-/* Attach menu — pops UP above the input wrap (so it stays visible above the
-   keyboard / nav). Anchored relative to #conversationScreen which has position:relative. */
+/* Attach menu — drops DOWN from the input in document flow */
 .attach-menu {
-  position:absolute;
-  bottom:80px;    /* clears the input + nav */
-  left:0; right:0;
   display:flex; gap:8px;
   padding:8px;
+  margin-bottom:8px;
   background:var(--navy-mid);
   border:1px solid var(--border-soft);
   border-radius:12px;
-  box-shadow:0 -4px 16px rgba(0,0,0,0.4);
-  z-index:50;
+  box-shadow:0 4px 16px rgba(0,0,0,0.4);
 }
 .attach-menu.hidden { display:none; }
 .attach-menu-item { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 6px; background:var(--navy-deep); border:1px solid var(--border-soft); border-radius:10px; cursor:pointer; color:var(--text); font-size:12px; font-weight:600; transition:all 0.15s; }
@@ -811,17 +814,8 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
           </div>
           <button class="conv-edit" id="convEditBtn" onclick="showEditGroupModal()" style="display:none;" title="Edit group">⚙</button>
         </div>
-        <div id="messageList" class="message-list"></div>
 
-        <!-- Pending attachment preview (above the input) -->
-        <div id="pendingAttachment" class="pending-attachment hidden">
-          <div class="pending-attachment-info">
-            <span id="pendingAttachmentIcon">📎</span>
-            <span id="pendingAttachmentName">file.jpg</span>
-          </div>
-          <button class="pending-attachment-cancel" onclick="clearPendingAttachment()" aria-label="Cancel">✕</button>
-        </div>
-
+        <!-- Input bar — pinned just below the conversation header -->
         <div class="chat-input-wrap">
           <button class="chat-attach-btn" onclick="toggleAttachMenu()" aria-label="Attach">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
@@ -832,7 +826,16 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
           </button>
         </div>
 
-        <!-- Attachment menu (opens below the input when toggled) -->
+        <!-- Pending attachment preview — sits under the input -->
+        <div id="pendingAttachment" class="pending-attachment hidden">
+          <div class="pending-attachment-info">
+            <span id="pendingAttachmentIcon">📎</span>
+            <span id="pendingAttachmentName">file.jpg</span>
+          </div>
+          <button class="pending-attachment-cancel" onclick="clearPendingAttachment()" aria-label="Cancel">✕</button>
+        </div>
+
+        <!-- Attachment menu — drops DOWN from the input when toggled -->
         <div id="attachMenu" class="attach-menu hidden">
           <button class="attach-menu-item" onclick="pickAttachment('photo')">
             <span class="attach-menu-icon">📷</span>
@@ -843,6 +846,9 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
             <span class="attach-menu-label">File</span>
           </button>
         </div>
+
+        <!-- Messages — newest at top, oldest at bottom -->
+        <div id="messageList" class="message-list"></div>
 
         <!-- Hidden file inputs -->
         <input type="file" id="chatPhotoInput" accept="image/*" style="display:none;" onchange="onAttachmentChosen(event,'image')">
@@ -1773,13 +1779,19 @@ function renderMessages(force) {
   const pendingState = Object.keys(pendingSends).sort().map(k => k + ':' + pendingSends[k].state).join(',');
   const fp = messagesFingerprint(chatMessages) + '||' + pendingState;
   if (!force && fp === lastRenderedFingerprint) return; // nothing changed, skip render
+  const wasEmpty = !lastRenderedFingerprint || lastRenderedFingerprint === 'empty';
   lastRenderedFingerprint = fp;
+
+  // Build display order: newest first (input is at the top of the screen,
+  // so most recent messages should appear closest to it).
+  const ordered = chatMessages.slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
 
   let html = '';
   let lastDate = '';
-  chatMessages.forEach(msg => {
+  ordered.forEach(msg => {
     const d       = new Date(msg.ts);
     const dateStr = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+    // In reverse order, emit the divider when we cross into a new (older) day
     if (dateStr !== lastDate) { html += `<div class="chat-day-divider">${dateStr}</div>`; lastDate = dateStr; }
     const isMine  = msg.author === empName;
     const initials = initialsOf(msg.author);
@@ -1822,6 +1834,10 @@ function renderMessages(force) {
     </div>`;
   });
   list.innerHTML = html;
+  // Scroll to TOP (newest message) on the first render of a conversation or
+  // when explicitly forced (e.g. user just sent a message). Don't yank the
+  // user's scroll position on background polls.
+  if (wasEmpty || force) list.scrollTop = 0;
   list.scrollTop = list.scrollHeight;
 }
 
