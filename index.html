@@ -253,11 +253,40 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 .msg-wrap.mine .msg-text { color:var(--navy-deep); }
 .msg-time { font-size:9px; color:var(--muted); margin-top:3px; font-family:'DM Mono',monospace; }
 .msg-wrap.mine .msg-time { color:rgba(13,29,56,0.6); }
-.chat-input-wrap { display:flex; gap:8px; margin-top:8px; padding:8px 0 4px; background:var(--navy-deep); }
+.chat-input-wrap { display:flex; gap:8px; margin-top:8px; padding:8px 0 4px; background:var(--navy-deep); align-items:center; }
 .chat-input-wrap input { flex:1; padding:11px 14px; background:var(--navy-mid); border:1px solid var(--border-soft); color:var(--text); border-radius:100px; font-size:14px; outline:none; }
 .chat-input-wrap input:focus { border-color:var(--accent); }
+.chat-attach-btn { width:38px; height:38px; border-radius:50%; background:transparent; border:1px solid var(--border-soft); color:var(--muted); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:all 0.15s; padding:0; }
+.chat-attach-btn:hover { color:var(--accent); border-color:var(--accent); background:rgba(79,163,224,0.08); }
 .chat-send-btn { width:42px; height:42px; border-radius:50%; background:var(--accent); border:none; color:var(--navy-deep); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:filter 0.2s; }
 .chat-send-btn:hover { filter:brightness(1.1); }
+
+/* Attach menu — small popover above input */
+.attach-menu { display:flex; gap:8px; padding:8px; margin-top:4px; background:var(--navy-mid); border:1px solid var(--border-soft); border-radius:12px; }
+.attach-menu.hidden { display:none; }
+.attach-menu-item { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 6px; background:var(--navy-deep); border:1px solid var(--border-soft); border-radius:10px; cursor:pointer; color:var(--text); font-size:12px; font-weight:600; transition:all 0.15s; }
+.attach-menu-item:hover { border-color:var(--accent); background:rgba(79,163,224,0.08); }
+.attach-menu-icon { font-size:22px; line-height:1; }
+.attach-menu-label { font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); }
+
+/* Pending attachment preview chip — above input, removable */
+.pending-attachment { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 12px; margin-top:8px; background:rgba(79,163,224,0.08); border:1px solid rgba(79,163,224,0.3); border-radius:10px; font-size:13px; }
+.pending-attachment.hidden { display:none; }
+.pending-attachment-info { display:flex; align-items:center; gap:8px; min-width:0; flex:1; color:var(--text); }
+.pending-attachment-info span:last-child { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pending-attachment-cancel { background:none; border:none; color:var(--muted); font-size:16px; cursor:pointer; flex-shrink:0; padding:4px 8px; }
+.pending-attachment-cancel:hover { color:var(--danger); }
+
+/* Attachments inside message bubbles */
+.msg-attachment-img { display:block; max-width:240px; max-height:240px; width:100%; border-radius:10px; margin-bottom:4px; cursor:pointer; background:rgba(255,255,255,0.04); }
+.msg-attachment-file { display:flex; align-items:center; gap:8px; padding:8px 10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:10px; margin-bottom:4px; cursor:pointer; text-decoration:none; color:inherit; font-size:13px; }
+.msg-attachment-file:hover { background:rgba(255,255,255,0.1); }
+.msg-attachment-file-icon { font-size:18px; flex-shrink:0; }
+.msg-attachment-file-name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; }
+
+/* Uploading indicator — small spinner-ish element */
+.attachment-uploading { display:inline-block; width:12px; height:12px; border:2px solid rgba(255,255,255,0.2); border-top-color:var(--accent); border-radius:50%; animation:spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 .dm-picker { background:var(--navy-mid); border:1px solid var(--border-soft); border-radius:14px; padding:14px; margin-bottom:10px; position:relative; z-index:10; }
 .dm-pick-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:10px; cursor:pointer; transition:background 0.15s; }
 .dm-pick-item:hover { background:var(--navy-dark); }
@@ -274,7 +303,14 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 .chats-list-status.err { color:var(--danger); }
 
 /* Row: compact, tightly-packed, clear visual rhythm */
-.chat-row { display:flex; align-items:center; gap:12px; padding:8px 10px; border-radius:10px; cursor:pointer; transition:background 0.12s; }
+.chat-row {
+  display:flex; align-items:center; gap:12px;
+  padding:6px 10px;
+  height:58px;        /* fixed: avatar 42 + 2*8 padding margin = 58 */
+  box-sizing:border-box;
+  border-radius:10px; cursor:pointer; transition:background 0.12s;
+  overflow:hidden;
+}
 .chat-row:nth-child(odd)  { background:rgba(255,255,255,0.015); }
 .chat-row:nth-child(even) { background:rgba(255,255,255,0.04); }
 .chat-row:hover, .chat-row:active { background:rgba(79,163,224,0.12); }
@@ -302,8 +338,8 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 .chat-row-avatar[data-color="8"] { background:linear-gradient(135deg,#ec4899,#be185d); } /* pink */
 .chat-row-avatar[data-color="9"] { background:linear-gradient(135deg,#f43f5e,#9f1239); } /* rose */
 
-/* Body: two compact stacked lines */
-.chat-row-body { flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
+/* Body: two compact stacked lines, centered vertically within the fixed row height */
+.chat-row-body { flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center; gap:1px; height:100%; }
 .chat-row-top  { display:flex; justify-content:space-between; align-items:center; gap:8px; line-height:1.2; }
 .chat-row-name { font-size:14px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .chat-row-time { font-size:11px; color:rgba(255,255,255,0.45); font-family:'DM Mono',monospace; flex-shrink:0; }
@@ -724,12 +760,41 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
           <button class="conv-edit" id="convEditBtn" onclick="showEditGroupModal()" style="display:none;" title="Edit group">⚙</button>
         </div>
         <div id="messageList" class="message-list"></div>
+
+        <!-- Pending attachment preview (above the input) -->
+        <div id="pendingAttachment" class="pending-attachment hidden">
+          <div class="pending-attachment-info">
+            <span id="pendingAttachmentIcon">📎</span>
+            <span id="pendingAttachmentName">file.jpg</span>
+          </div>
+          <button class="pending-attachment-cancel" onclick="clearPendingAttachment()" aria-label="Cancel">✕</button>
+        </div>
+
         <div class="chat-input-wrap">
+          <button class="chat-attach-btn" onclick="toggleAttachMenu()" aria-label="Attach">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          </button>
           <input type="text" id="chatInput" placeholder="Message…" onkeydown="if(event.key==='Enter')sendMessage()">
           <button class="chat-send-btn" onclick="sendMessage()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
           </button>
         </div>
+
+        <!-- Attachment menu (above the input, hidden until toggled) -->
+        <div id="attachMenu" class="attach-menu hidden">
+          <button class="attach-menu-item" onclick="pickAttachment('photo')">
+            <span class="attach-menu-icon">📷</span>
+            <span class="attach-menu-label">Photo</span>
+          </button>
+          <button class="attach-menu-item" onclick="pickAttachment('file')">
+            <span class="attach-menu-icon">📄</span>
+            <span class="attach-menu-label">File</span>
+          </button>
+        </div>
+
+        <!-- Hidden file inputs -->
+        <input type="file" id="chatPhotoInput" accept="image/*" style="display:none;" onchange="onAttachmentChosen(event,'image')">
+        <input type="file" id="chatFileInput" style="display:none;" onchange="onAttachmentChosen(event,'file')">
       </div>
 
       <!-- New / Edit group modal -->
@@ -1593,11 +1658,30 @@ function renderMessages() {
     const timeStr  = d.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
     // For groups and team, show sender name on non-mine messages. For DMs, name is redundant.
     const showName = !isMine && activeChatType !== 'dm';
+
+    // Build attachment HTML if the message has one
+    let attachHtml = '';
+    if (msg.attachmentUrl) {
+      const safeUrl  = escAttr(msg.attachmentUrl);
+      const safeName = escHtml(msg.attachmentName || 'Attachment');
+      if (msg.attachmentType === 'image') {
+        attachHtml = `<img class="msg-attachment-img" src="${safeUrl}" alt="${safeName}" onclick="window.open('${safeUrl}','_blank')" loading="lazy">`;
+      } else {
+        attachHtml = `<a class="msg-attachment-file" href="${safeUrl}" target="_blank" rel="noopener">
+          <span class="msg-attachment-file-icon">📄</span>
+          <span class="msg-attachment-file-name">${safeName}</span>
+        </a>`;
+      }
+    }
+
+    const textHtml = msg.text ? `<div class="msg-text">${escHtml(msg.text)}</div>` : '';
+
     html += `<div class="msg-wrap ${isMine ? 'mine' : ''}">
       ${!isMine ? `<div class="msg-avatar">${initials}</div>` : ''}
       <div class="msg-bubble">
         ${showName ? `<div class="msg-name">${escHtml(msg.author)}</div>` : ''}
-        <div class="msg-text">${escHtml(msg.text)}</div>
+        ${attachHtml}
+        ${textHtml}
         <div class="msg-time">${timeStr}</div>
       </div>
     </div>`;
@@ -1606,22 +1690,139 @@ function renderMessages() {
   list.scrollTop = list.scrollHeight;
 }
 
+// State for the attachment being composed (if any)
+let pendingAttachment = null; // { url, type, name } once uploaded
+
 async function sendMessage() {
   const input = document.getElementById('chatInput');
   const text  = input.value.trim();
-  if (!text || !sheetUrl || !empName || !activeChatChannel) return;
+  // Allow sending if there's text OR an attachment
+  if ((!text && !pendingAttachment) || !sheetUrl || !empName || !activeChatChannel) return;
+
   input.value = '';
   const ts = Date.now();
+  const attachment = pendingAttachment;
+  clearPendingAttachment();
   try {
     await fetch(sheetUrl, {
       method: 'POST', mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'sendMessage', channel: activeChatChannel, author: empName, text, ts })
+      body: JSON.stringify({ action: 'sendMessage', channel: activeChatChannel, author: empName, text, ts, attachment })
     });
-    chatMessages.push({ channel: activeChatChannel, author: empName, text, ts });
+    // Optimistic local render
+    chatMessages.push({
+      channel: activeChatChannel, author: empName, text, ts,
+      attachmentUrl:  attachment ? attachment.url  : '',
+      attachmentType: attachment ? attachment.type : '',
+      attachmentName: attachment ? attachment.name : ''
+    });
     renderMessages();
     setTimeout(loadMessages, 1500);
   } catch(e) { toast('Could not send message', 'err'); }
+}
+
+// ── Attachment flow ────────────────────────────────────────────────
+function toggleAttachMenu() {
+  const m = document.getElementById('attachMenu');
+  if (!m) return;
+  m.classList.toggle('hidden');
+}
+
+function pickAttachment(kind) {
+  document.getElementById('attachMenu').classList.add('hidden');
+  if (kind === 'photo') {
+    document.getElementById('chatPhotoInput').click();
+  } else if (kind === 'file') {
+    document.getElementById('chatFileInput').click();
+  }
+}
+
+function clearPendingAttachment() {
+  pendingAttachment = null;
+  const wrap = document.getElementById('pendingAttachment');
+  if (wrap) wrap.classList.add('hidden');
+  // Clear the file inputs too so re-picking the same file fires onchange
+  const p = document.getElementById('chatPhotoInput'); if (p) p.value = '';
+  const f = document.getElementById('chatFileInput');  if (f) f.value = '';
+}
+
+function showPendingAttachment(name, kind, uploading) {
+  const wrap = document.getElementById('pendingAttachment');
+  const icon = document.getElementById('pendingAttachmentIcon');
+  const nm   = document.getElementById('pendingAttachmentName');
+  if (!wrap) return;
+  wrap.classList.remove('hidden');
+  if (uploading) {
+    icon.innerHTML = '<span class="attachment-uploading"></span>';
+    nm.textContent = 'Uploading ' + name + '…';
+  } else {
+    icon.textContent = kind === 'image' ? '📷' : '📄';
+    nm.textContent = name;
+  }
+}
+
+async function onAttachmentChosen(event, kind) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  if (!sheetUrl) { toast('Not connected', 'err'); return; }
+
+  // 5MB cap to avoid choking Apps Script / base64 inflation
+  const MAX_BYTES = 5 * 1024 * 1024;
+  if (file.size > MAX_BYTES) {
+    toast('File too large (max 5 MB)', 'err');
+    event.target.value = '';
+    return;
+  }
+
+  showPendingAttachment(file.name, kind, true);
+
+  try {
+    const base64 = await fileToBase64(file);
+    // Use default cors mode (NOT no-cors) so we can read the response with the
+    // Drive URL. Content-Type 'text/plain' avoids the CORS preflight that
+    // would otherwise reject Apps Script. Apps Script reads e.postData.contents
+    // regardless of declared content-type.
+    const res = await fetch(sheetUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'uploadChatAttachment',
+        fileName: file.name,
+        mimeType: file.type,
+        data: base64
+      })
+    });
+    const result = await res.json();
+    if (!result || !result.url) {
+      throw new Error(result && result.error ? result.error : 'Upload returned no URL');
+    }
+    pendingAttachment = {
+      url:  result.url,
+      type: result.type || kind,
+      name: result.fileName || file.name
+    };
+    showPendingAttachment(pendingAttachment.name, pendingAttachment.type, false);
+    toast('Attachment ready — hit send', 'ok');
+  } catch (e) {
+    console.log('Attachment upload error:', e);
+    toast('Upload failed: ' + (e.message || 'unknown'), 'err');
+    clearPendingAttachment();
+  } finally {
+    event.target.value = '';
+  }
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => {
+      const result = reader.result || '';
+      const comma  = result.indexOf(',');
+      resolve(comma >= 0 ? result.substring(comma + 1) : result);
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 }
 
 function startChatPoll() {
