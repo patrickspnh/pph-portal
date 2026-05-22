@@ -70,6 +70,12 @@ main { flex: 1; padding: 0 16px 80px; position: relative; z-index: 10; overflow-
 /* messages view: restore the 80px bottom padding so the input/menu clear the
    fixed bottom nav, plus a little extra for the iPhone safe-area inset. */
 #view-messages { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+
+/* Chat fullscreen mode — hide app header + profile banner when on Chat tab,
+   so the conversation gets the full screen like a real messaging app. */
+body.chat-fullscreen > header,
+body.chat-fullscreen #profileBanner { display: none !important; }
+body.chat-fullscreen main { padding-top: 12px; }
 .view { display: none; }
 .view.active { display: block; animation: fadeUp 0.3s ease both; }
 @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
@@ -247,7 +253,7 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
   /* No fixed height: messages take only as much vertical space as they need,
      and the input sits directly below them. A max-height prevents long
      conversations from running off-screen — overflow scrolls within the list. */
-  max-height:calc(100dvh - 320px);
+  max-height:calc(100dvh - 200px);
   min-height:60px;
   overflow-y:auto;
   display:flex;
@@ -1142,6 +1148,8 @@ function showTab(name) {
     if (view) view.classList.toggle('active', n === name);
     if (nav)  nav.classList.toggle('active', n === name);
   });
+  // Full-screen the Chat tab — hide app header + profile banner there
+  document.body.classList.toggle('chat-fullscreen', name === 'messages');
   if (name === 'log')      { if (empName) showLogForm(true); }
   if (name === 'history')  { renderHistory(); fetchHistoryFromSheet(); }
   if (name === 'messages') { initChat(); }
@@ -1815,7 +1823,12 @@ async function onAttachmentChosen(event, kind) {
   // (PDFs, docs, etc) — those are uploaded as-is.
   try {
     if (kind === 'image' && original.type && original.type.indexOf('image/') === 0) {
-      const blob = await compressImage(original, 1600, 0.82);
+      // Try aggressive first; if still too big, recompress smaller
+      let blob = await compressImage(original, 1400, 0.75);
+      if (blob.size > 1.5 * 1024 * 1024) {
+        // Still big — go smaller
+        blob = await compressImage(original, 1000, 0.70);
+      }
       // Re-wrap as a File so .name is preserved (some browsers care)
       file = new File([blob], original.name.replace(/\.(heic|heif|png|webp)$/i, '.jpg'), { type: 'image/jpeg' });
     }
@@ -1824,10 +1837,10 @@ async function onAttachmentChosen(event, kind) {
     // Continue with the original file
   }
 
-  // 5MB cap after compression — non-images that exceed this are rejected
-  const MAX_BYTES = 5 * 1024 * 1024;
+  // 8MB cap after compression — non-images that exceed this are rejected
+  const MAX_BYTES = 8 * 1024 * 1024;
   if (file.size > MAX_BYTES) {
-    toast('File too large (max 5 MB after compression)', 'err');
+    toast('File too large (' + Math.round(file.size / 1024 / 1024) + ' MB, max 8 MB)', 'err');
     clearPendingAttachment();
     event.target.value = '';
     return;
@@ -1835,45 +1848,14 @@ async function onAttachmentChosen(event, kind) {
 
   try {
     const base64 = await fileToBase64(file);
-    let res;
-    try {
-      res = await fetch(sheetUrl, {
-        method: 'POST',
-        // text/plain avoids the CORS preflight that application/json would trigger.
-        // Apps Script reads the raw body via e.postData.contents either way.
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          action: 'uploadChatAttachment',
-          fileName: file.name,
-          mimeType: file.type,
-          data: base64
-        })
-      });
-    } catch (netErr) {
-      // Network-layer failure (CORS rejection, connection drop, etc.)
-      throw new Error('Network: ' + (netErr.message || 'fetch failed'));
-    }
-    if (!res.ok) {
-      // HTTP-level failure: try to read body for diagnostics
-      let body = '';
-      try { body = await res.text(); } catch (_) {}
-      throw new Error('HTTP ' + res.status + (body ? ' — ' + body.substring(0, 200) : ''));
-    }
-    let result;
-    try {
-      result = await res.json();
-    } catch (parseErr) {
-      // Server returned non-JSON — most likely the default response because the
-      // new action isn't deployed. Read it as text to surface what came back.
-      let body = '';
-      try { body = await res.clone().text(); } catch (_) {}
-      throw new Error('Server returned non-JSON: ' + body.substring(0, 200));
-    }
-    if (!result || !result.url) {
-      if (result && result.error) {
-        throw new Error('Server error: ' + result.error);
-      }
-      throw new Error('No URL returned — is the Apps Script redeployed? Got: ' + JSON.stringify(result).substring(0, 200));
+    const result = await iosSafeUpload({
+      action: 'uploadChatAttachment',
+      fileName: file.name,
+      mimeType: file.type,
+      data: base64
+    });
+    if (result.status === 'error' || !result.url) {
+      throw new Error(result.error || 'Upload failed');
     }
     pendingAttachment = {
       url:  result.url,
@@ -1902,6 +1884,50 @@ function fileToBase64(file) {
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(file);
   });
+}
+
+// iOS-safe upload helper:
+//   POST the payload with no-cors (which iOS Safari handles reliably but
+//   doesn't let us read the response), then poll a GET endpoint until the
+//   server has stored the result keyed by clientId.
+// Usage:
+//   const result = await iosSafeUpload({ action: 'uploadReceipt', job, ... });
+//   // result is whatever the server stored — typically { status:'ok', url, ... } or { status:'error', error }
+async function iosSafeUpload(payload, opts) {
+  opts = opts || {};
+  const timeoutMs = opts.timeoutMs || 45000;     // 45s total wait
+  const pollEveryMs = opts.pollEveryMs || 1500;  // poll every 1.5s
+  const clientId  = 'c_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
+
+  // Fire the upload — no-cors so the request leaves the browser cleanly on iOS Safari.
+  // We can't read the response, but the server will stash the result under clientId.
+  try {
+    await fetch(sheetUrl, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({}, payload, { clientId }))
+    });
+  } catch (netErr) {
+    throw new Error('Network: ' + (netErr.message || 'fetch failed'));
+  }
+
+  // Poll for the result
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    await new Promise(r => setTimeout(r, pollEveryMs));
+    let res, data;
+    try {
+      res  = await fetch(sheetUrl + '?action=getUploadResult&clientId=' + encodeURIComponent(clientId));
+      data = await res.json();
+    } catch (pollErr) {
+      // Keep polling — could be a transient blip
+      continue;
+    }
+    if (data && data.status && data.status !== 'pending') {
+      return data;
+    }
+  }
+  throw new Error('Upload timed out after ' + Math.round(timeoutMs/1000) + 's');
 }
 
 function startChatPoll() {
@@ -2212,32 +2238,25 @@ async function confirmReceiptUpload() {
 
     const fileName = todayStr() + '_' + empName.split(' ')[0].toLowerCase() + '_' + pendingReceipt.name;
 
-    const res  = await fetch(sheetUrl, {
-      method: 'POST',
-      // text/plain avoids the CORS preflight that application/json would trigger.
-      // Apps Script reads the raw body via e.postData.contents either way.
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
-        action:   'uploadReceipt',
-        job:      activeJobFile,
-        author:   empName,
-        date:     todayStr(),
-        fileName: fileName,
-        mimeType: pendingReceipt.type,
-        data:     base64
-      })
+    const result = await iosSafeUpload({
+      action:   'uploadReceipt',
+      job:      activeJobFile,
+      author:   empName,
+      date:     todayStr(),
+      fileName: fileName,
+      mimeType: pendingReceipt.type,
+      data:     base64
     });
 
-    const result = await res.json();
     document.getElementById('uploadProgress').style.display = 'none';
 
-    if (result && result.url) {
+    if (result.status === 'ok' && result.url) {
       const receipt = { job: activeJobFile, fileName, author: empName, date: todayStr(), url: result.url, ts: Date.now() };
       jobFileData.receipts.unshift(receipt);
       renderReceipts();
       toast('✓ Receipt uploaded to Google Drive', 'ok');
     } else {
-      toast('Upload failed — try again', 'err');
+      toast('Upload failed: ' + (result.error || 'unknown'), 'err');
     }
   } catch(e) {
     document.getElementById('uploadProgress').style.display = 'none';
