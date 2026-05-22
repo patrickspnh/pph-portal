@@ -241,7 +241,7 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 .chat-chan-btn { padding:6px 12px; border-radius:100px; border:1px solid var(--border-soft); background:var(--navy-mid); color:var(--muted); font-size:12px; font-weight:700; cursor:pointer; transition:all 0.2s; white-space:nowrap; }
 .chat-chan-btn.active { background:var(--accent); color:var(--navy-deep); border-color:var(--accent); }
 .chat-chan-btn.chat-chan-new { border-color:rgba(79,163,224,0.4); color:var(--accent); }
-.message-list { height:calc(100dvh - 240px); overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-bottom:8px; }
+.message-list { height:calc(100dvh - 220px); overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-bottom:8px; }
 .msg-wrap { display:flex; gap:8px; align-items:flex-end; }
 .msg-wrap.mine { flex-direction:row-reverse; }
 .msg-avatar { width:28px; height:28px; border-radius:50%; background:var(--navy); border:1px solid var(--border-soft); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--accent); flex-shrink:0; }
@@ -264,6 +264,57 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 .dm-pick-avatar { width:32px; height:32px; border-radius:50%; background:var(--navy); border:1px solid var(--border-soft); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:var(--accent); }
 .dm-pick-name { font-size:13px; font-weight:600; }
 .chat-day-divider { text-align:center; font-size:10px; color:var(--muted); font-family:'DM Mono',monospace; letter-spacing:.08em; text-transform:uppercase; padding:4px 0; }
+
+/* ── CHATS LIST (Telegram-style) ── */
+.chats-list-header { display:flex; align-items:center; justify-content:space-between; padding:8px 4px 12px; border-bottom:1px solid var(--border-soft); margin-bottom:6px; }
+.chats-list-title { font-size:18px; font-weight:800; letter-spacing:.02em; }
+.chats-new-btn { width:36px; height:36px; border-radius:50%; background:var(--accent); color:var(--navy-deep); border:none; font-size:22px; font-weight:700; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:filter 0.15s; }
+.chats-new-btn:hover { filter:brightness(1.1); }
+.chats-list-status { text-align:center; font-size:12px; color:var(--muted); padding:14px 8px; }
+.chats-list-status.err { color:var(--danger); }
+
+.chat-row { display:flex; align-items:center; gap:12px; padding:11px 8px; border-radius:12px; cursor:pointer; transition:background 0.15s; border-bottom:1px solid rgba(255,255,255,0.04); }
+.chat-row:hover, .chat-row:active { background:var(--navy-mid); }
+.chat-row-avatar { width:44px; height:44px; border-radius:50%; background:var(--navy-mid); border:1px solid var(--border-soft); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:var(--accent); flex-shrink:0; }
+.chat-row-avatar.team { background:linear-gradient(135deg,#4fa3e0,#1e3a6e); color:#fff; border-color:transparent; }
+.chat-row-avatar.group { background:linear-gradient(135deg,#a78bfa,#5b21b6); color:#fff; border-color:transparent; }
+.chat-row-body { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.chat-row-top { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+.chat-row-name { font-size:14px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.chat-row-time { font-size:11px; color:var(--muted); font-family:'DM Mono',monospace; flex-shrink:0; }
+.chat-row-preview { font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.chat-row-preview.empty { font-style:italic; opacity:0.7; }
+
+/* ── CONVERSATION HEADER ── */
+.conv-header { display:flex; align-items:center; gap:6px; padding:6px 0 10px; border-bottom:1px solid var(--border-soft); margin-bottom:8px; }
+.conv-back { background:none; border:none; color:var(--accent); font-size:28px; line-height:1; cursor:pointer; padding:4px 10px 4px 4px; font-weight:300; }
+.conv-back:hover { color:var(--text); }
+.conv-title-wrap { flex:1; min-width:0; }
+.conv-title { font-size:15px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.conv-sub { font-size:11px; color:var(--muted); letter-spacing:.04em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.conv-edit { background:none; border:1px solid var(--border-soft); color:var(--muted); width:32px; height:32px; border-radius:50%; cursor:pointer; font-size:16px; flex-shrink:0; }
+.conv-edit:hover { color:var(--accent); border-color:var(--accent); }
+
+/* ── GROUP MODAL ── */
+.group-modal { position:fixed; inset:0; background:rgba(7,15,30,0.78); display:flex; align-items:center; justify-content:center; z-index:100; padding:16px; }
+.group-modal.hidden { display:none; }
+.group-modal-card { background:var(--navy-deep); border:1px solid var(--border-soft); border-radius:16px; padding:20px; width:100%; max-width:360px; max-height:80vh; display:flex; flex-direction:column; }
+.group-modal-title { font-size:16px; font-weight:800; margin-bottom:12px; }
+.group-name-input { width:100%; padding:10px 12px; background:var(--navy-mid); border:1px solid var(--border-soft); border-radius:10px; color:var(--text); font-size:14px; margin-bottom:14px; box-sizing:border-box; outline:none; }
+.group-name-input:focus { border-color:var(--accent); }
+.group-members-label { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+.group-member-list { flex:1; overflow-y:auto; margin-bottom:14px; max-height:280px; }
+.group-member-item { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; cursor:pointer; transition:background 0.15s; }
+.group-member-item:hover { background:var(--navy-mid); }
+.group-member-item.selected { background:rgba(79,163,224,0.12); }
+.group-member-check { width:20px; height:20px; border-radius:6px; border:1.5px solid var(--border-soft); display:flex; align-items:center; justify-content:center; flex-shrink:0; background:var(--navy-mid); }
+.group-member-item.selected .group-member-check { background:var(--accent); border-color:var(--accent); color:var(--navy-deep); font-weight:800; }
+.group-member-name { font-size:13px; font-weight:600; flex:1; }
+.group-modal-buttons { display:flex; gap:8px; }
+.group-modal-cancel, .group-modal-save { flex:1; padding:10px; border-radius:10px; border:none; font-size:13px; font-weight:700; cursor:pointer; }
+.group-modal-cancel { background:none; border:1px solid var(--border-soft); color:var(--muted); }
+.group-modal-save { background:var(--accent); color:var(--navy-deep); }
+.group-modal-save:disabled { opacity:0.4; cursor:not-allowed; }
 
 /* ── DAY VIEW ── */
 .day-view { display:flex; flex-direction:column; }
@@ -627,39 +678,46 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
         <div style="font-size:14px;">Setting up chat…</div>
       </div>
 
-      <!-- Channel list / DM selector -->
-      <div id="chatReady" style="display:none;">
-
-        <!-- DM picker — shows at top when + DM is tapped -->
-        <div id="dmPicker" style="display:none;" class="dm-picker">
-          <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Start a Direct Message</div>
-          <div id="dmPickerList"></div>
-          <button onclick="document.getElementById('dmPicker').style.display='none'" style="width:100%;margin-top:8px;padding:8px;background:none;border:1px solid var(--border-soft);color:var(--muted);border-radius:8px;cursor:pointer;font-size:12px;">Cancel</button>
+      <!-- SCREEN A: Chats list (default) -->
+      <div id="chatsListScreen" style="display:none;">
+        <div class="chats-list-header">
+          <div class="chats-list-title">Chats</div>
+          <button class="chats-new-btn" onclick="showNewGroupModal()" title="New group">＋</button>
         </div>
+        <div id="chatsListBody"></div>
+        <div id="chatsListStatus" class="chats-list-status hidden"></div>
+      </div>
 
-        <!-- Channel bar -->
-        <div class="chat-channel-bar">
-          <button class="chat-chan-btn active" id="chanBtnGroup" onclick="switchChannel('group')">
-            👥 Team
-          </button>
-          <div id="dmButtons"></div>
-          <button class="chat-chan-btn chat-chan-new" onclick="showDMPicker()">+ DM</button>
+      <!-- SCREEN B: Open conversation -->
+      <div id="conversationScreen" style="display:none;">
+        <div class="conv-header">
+          <button class="conv-back" onclick="backToChatsList()" aria-label="Back">‹</button>
+          <div class="conv-title-wrap">
+            <div class="conv-title" id="convTitle">Chat</div>
+            <div class="conv-sub" id="convSubtitle"></div>
+          </div>
+          <button class="conv-edit" id="convEditBtn" onclick="showEditGroupModal()" style="display:none;" title="Edit group">⚙</button>
         </div>
-
-        <!-- Active channel label -->
-        <div id="chatChannelLabel" style="font-size:11px;font-weight:700;color:var(--muted);text-align:center;padding:2px 0 6px;letter-spacing:.06em;text-transform:uppercase;">
-          Team Chat — All Employees
-        </div>
-
-        <!-- Message list -->
         <div id="messageList" class="message-list"></div>
-
-        <!-- Input -->
         <div class="chat-input-wrap">
           <input type="text" id="chatInput" placeholder="Message…" onkeydown="if(event.key==='Enter')sendMessage()">
           <button class="chat-send-btn" onclick="sendMessage()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
           </button>
+        </div>
+      </div>
+
+      <!-- New / Edit group modal -->
+      <div id="groupModal" class="group-modal hidden">
+        <div class="group-modal-card">
+          <div class="group-modal-title" id="groupModalTitle">New Group</div>
+          <input type="text" id="groupNameInput" class="group-name-input" placeholder="Group name (e.g. Anderson Job)" maxlength="60">
+          <div class="group-members-label">Members</div>
+          <div id="groupMemberList" class="group-member-list"></div>
+          <div class="group-modal-buttons">
+            <button class="group-modal-cancel" onclick="hideGroupModal()">Cancel</button>
+            <button class="group-modal-save" id="groupModalSaveBtn" onclick="submitGroupModal()">Create</button>
+          </div>
         </div>
       </div>
     </div>
@@ -950,6 +1008,7 @@ function showTab(name) {
     if (view) view.classList.toggle('active', n === name);
     if (nav)  nav.classList.toggle('active', n === name);
   });
+  if (name === 'log')      { if (empName) showLogForm(true); }
   if (name === 'history')  { renderHistory(); fetchHistoryFromSheet(); }
   if (name === 'messages') { initChat(); }
   if (name === 'jobs')     { initJobsTab(); fetchJobsFromSheet(); }
@@ -1123,45 +1182,298 @@ function onManualHrsChange(val) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// CHAT — Built on Google Sheets, no external SDK needed
+// CHAT — Telegram-style chats list + conversations + groups
+// Built on Google Sheets, no external SDK needed
 // ─────────────────────────────────────────────────────────────
 const CHAT_EMPLOYEES = [
   'Patrick Carlson','Nick Voelker','Trent Carlson','Donnie Nicely',
   'Jerry Erickson','William Carlson','Adrian Walli','Morgan Ruohonen','Jess Erickson'
 ];
 
-let activeChatChannel = 'group';
+// State
+let chatsList         = [];     // [{ channelId, type, name, preview, members? }]
+let myGroups          = [];     // [{ groupId, name, creator, members }]
+let activeChatChannel = null;   // null = on chats list; otherwise the open channel
+let activeChatType    = null;   // 'team' | 'group' | 'dm'
+let activeChatName    = '';     // display name for header
+let activeChatMembers = null;   // for groups: array of names; null otherwise
 let chatMessages      = [];
 let chatPollTimer     = null;
-let lastMessageTime   = 0;
+let groupModalMode    = 'create'; // 'create' | 'edit'
+let groupModalEditingId = null;
 
+// Map a DM channelId back to the "other person" name using CHAT_EMPLOYEES.
+function resolveDMOther(channelId) {
+  if (!empName) return '';
+  const mySlug = empName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+  // channelId is dm_a_b_c_d where pieces are slug parts of two names joined by _
+  // Easier: try each employee, build the canonical channelId for {empName, them}, see if it matches.
+  for (const cand of CHAT_EMPLOYEES) {
+    if (cand === empName) continue;
+    const canonical = buildDMChannelId(empName, cand);
+    if (canonical === channelId) return cand;
+  }
+  return '';
+}
+
+function buildDMChannelId(a, b) {
+  const names = [a, b].sort();
+  return 'dm_' + names.join('_').toLowerCase().replace(/[^a-z0-9_]/g, '');
+}
+
+function initialsOf(name) {
+  return (name || '?').split(/\s+/).map(w => w[0]).join('').slice(0,2).toUpperCase();
+}
+
+// Format a timestamp for the chats list:
+//   today        -> "2:14 PM"
+//   yesterday    -> "Yesterday"
+//   this week    -> "Mon"
+//   older        -> "Mar 4"
+function formatLastMessageTime(ts) {
+  if (!ts) return '';
+  const d   = new Date(ts);
+  const now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  if (sameDay) return d.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+
+  const diffMs = now - d;
+  if (diffMs < 7 * 24 * 60 * 60 * 1000) {
+    return d.toLocaleDateString('en-US', { weekday: 'short' });
+  }
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// Called when the Chat tab opens.
 async function initChat() {
-  if (!empName) { toast('Set up your profile first', 'err'); return; }
-  const ready    = document.getElementById('chatReady');
-  const notReady = document.getElementById('chatNotReady');
-  notReady.style.display = 'none';
-  ready.style.display    = 'block';
-  buildDMButtons();
-  await loadMessages();
+  if (!empName) { toast('Set up your profile first', 'err'); showTab('setup'); return; }
+  document.getElementById('chatNotReady').style.display = 'none';
+
+  // Always start on the chats list when the tab is opened fresh
+  activeChatChannel = null;
+  showChatsListScreen();
+  await loadChatsList();
   startChatPoll();
 }
 
-async function loadMessages() {
-  if (!sheetUrl) return;
+function showChatsListScreen() {
+  document.getElementById('chatsListScreen').style.display = 'block';
+  document.getElementById('conversationScreen').style.display = 'none';
+  activeChatChannel = null;
+}
+
+function showConversationScreen() {
+  document.getElementById('chatsListScreen').style.display = 'none';
+  document.getElementById('conversationScreen').style.display = 'block';
+}
+
+// ── Chats list ──────────────────────────────────────────────────────
+async function loadChatsList() {
+  const status = document.getElementById('chatsListStatus');
+  if (!sheetUrl) {
+    chatsList = [];
+    renderChatsList();
+    if (status) { status.textContent = 'Not connected to the spreadsheet. Open Settings to connect.'; status.className = 'chats-list-status err'; }
+    return;
+  }
   try {
-    const url  = sheetUrl + '?action=getMessages&channel=' + encodeURIComponent(activeChatChannel);
+    const url  = sheetUrl + '?action=getChatsList&employee=' + encodeURIComponent(empName);
+    const res  = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    chatsList = (data && data.chats) ? data.chats : [];
+    // Cache my groups so edit modal has member lists handy
+    myGroups = chatsList
+      .filter(c => c.type === 'group')
+      .map(c => ({ groupId: c.channelId, name: c.name, members: c.members || [] }));
+    renderChatsList();
+    if (status) status.classList.add('hidden');
+  } catch (e) {
+    console.log('Chats list load error:', e);
+    if (status) {
+      status.textContent = 'Could not load chats. Pull to retry or check your connection.';
+      status.className = 'chats-list-status err';
+      status.classList.remove('hidden');
+    }
+    // Still render the roster so the user isn't stuck
+    chatsList = [];
+    renderChatsList();
+  }
+}
+
+function renderChatsList() {
+  const body = document.getElementById('chatsListBody');
+  if (!body) return;
+
+  // Index the chats coming back from the server so we can also include
+  // employees the user has never DM'd (they go to the bottom).
+  const byChannel = {};
+  chatsList.forEach(c => { byChannel[c.channelId] = c; });
+
+  // Build the final ordered list:
+  //   1. Team (pinned)
+  //   2. Groups (alpha — server already sorts them)
+  //   3. DMs that have history (most recent first)
+  //   4. Roster employees the user has never DM'd (alpha)
+
+  const team   = byChannel['group'] || { channelId:'group', type:'team', name:'Team Chat', preview:null };
+  const groups = chatsList.filter(c => c.type === 'group');
+  const dmsWithHistory = chatsList
+    .filter(c => c.type === 'dm')
+    .map(c => Object.assign({}, c, { _other: resolveDMOther(c.channelId) }))
+    .filter(c => c._other) // drop any orphaned DM channels we can't resolve
+    .sort((a, b) => (b.preview?.ts || 0) - (a.preview?.ts || 0));
+
+  const dmedNames = new Set(dmsWithHistory.map(c => c._other));
+  const others = CHAT_EMPLOYEES
+    .filter(n => n !== empName && !dmedNames.has(n))
+    .sort();
+
+  let html = '';
+
+  // Team
+  html += rowHtml({
+    channelId: team.channelId,
+    avatar:    `<div class="chat-row-avatar team">👥</div>`,
+    name:      'Team Chat — All Employees',
+    preview:   team.preview,
+    onclick:   `openConversation('group','team','Team Chat — All Employees')`
+  });
+
+  // Groups
+  groups.forEach(g => {
+    const subtitle = g.preview
+      ? null
+      : ((g.members || []).length + ' members');
+    html += rowHtml({
+      channelId: g.channelId,
+      avatar:    `<div class="chat-row-avatar group">🛠</div>`,
+      name:      g.name,
+      preview:   g.preview,
+      subtitle:  subtitle,
+      onclick:   `openConversation('${escAttr(g.channelId)}','group','${escAttr(g.name)}')`
+    });
+  });
+
+  // DMs with history
+  dmsWithHistory.forEach(c => {
+    html += rowHtml({
+      channelId: c.channelId,
+      avatar:    `<div class="chat-row-avatar">${initialsOf(c._other)}</div>`,
+      name:      c._other,
+      preview:   c.preview,
+      onclick:   `openConversation('${escAttr(c.channelId)}','dm','${escAttr(c._other)}')`
+    });
+  });
+
+  // Roster employees never DM'd
+  others.forEach(n => {
+    const channelId = buildDMChannelId(empName, n);
+    html += rowHtml({
+      channelId: channelId,
+      avatar:    `<div class="chat-row-avatar">${initialsOf(n)}</div>`,
+      name:      n,
+      preview:   null,
+      subtitle:  'Tap to start chatting',
+      onclick:   `openConversation('${escAttr(channelId)}','dm','${escAttr(n)}')`
+    });
+  });
+
+  body.innerHTML = html;
+}
+
+function escAttr(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function escHtml(s) {
+  return escAttr(s);
+}
+
+function rowHtml({ avatar, name, preview, subtitle, onclick }) {
+  let previewLine = '';
+  let timeLine = '';
+  if (preview && preview.text) {
+    const who = preview.author === empName ? 'You' : (preview.author || '').split(' ')[0];
+    const prefix = who ? (who + ': ') : '';
+    previewLine = `<div class="chat-row-preview">${escHtml(prefix + preview.text)}</div>`;
+    timeLine    = `<div class="chat-row-time">${formatLastMessageTime(preview.ts)}</div>`;
+  } else if (subtitle) {
+    previewLine = `<div class="chat-row-preview empty">${escHtml(subtitle)}</div>`;
+  }
+  return `<div class="chat-row" onclick="${onclick}">
+    ${avatar}
+    <div class="chat-row-body">
+      <div class="chat-row-top">
+        <div class="chat-row-name">${escHtml(name)}</div>
+        ${timeLine}
+      </div>
+      ${previewLine}
+    </div>
+  </div>`;
+}
+
+// ── Conversation ────────────────────────────────────────────────────
+async function openConversation(channelId, type, displayName) {
+  activeChatChannel = channelId;
+  activeChatType    = type;
+  activeChatName    = displayName;
+  activeChatMembers = null;
+  if (type === 'group') {
+    const g = myGroups.find(x => x.groupId === channelId);
+    activeChatMembers = g ? g.members : null;
+  }
+
+  // Header
+  document.getElementById('convTitle').textContent = displayName;
+  const sub = document.getElementById('convSubtitle');
+  if (type === 'team') {
+    sub.textContent = 'Everyone at Patrick\'s P&H';
+  } else if (type === 'group') {
+    const count = activeChatMembers ? activeChatMembers.length : 0;
+    sub.textContent = count + ' member' + (count === 1 ? '' : 's');
+  } else {
+    sub.textContent = 'Direct message';
+  }
+
+  // Show edit button only for groups
+  document.getElementById('convEditBtn').style.display = (type === 'group') ? 'block' : 'none';
+
+  // Reset and render
+  chatMessages = [];
+  document.getElementById('messageList').innerHTML = '<div class="chat-day-divider">Loading…</div>';
+  showConversationScreen();
+  await loadMessages();
+  document.getElementById('chatInput').focus();
+}
+
+function backToChatsList() {
+  showChatsListScreen();
+  loadChatsList(); // refresh previews on the way back
+}
+
+async function loadMessages() {
+  if (!sheetUrl || !activeChatChannel) return;
+  try {
+    const url = sheetUrl
+      + '?action=getMessages&channel=' + encodeURIComponent(activeChatChannel)
+      + '&employee=' + encodeURIComponent(empName);
     const res  = await fetch(url);
     const data = await res.json();
     if (data && data.messages) {
       chatMessages = data.messages;
-      lastMessageTime = chatMessages.length ? chatMessages[chatMessages.length-1].ts : 0;
       renderMessages();
     }
-  } catch(e) { console.log('Chat load error:', e); }
+  } catch (e) { console.log('Chat load error:', e); }
 }
 
 function renderMessages() {
   const list = document.getElementById('messageList');
+  if (!list) return;
   if (!chatMessages.length) {
     list.innerHTML = '<div class="chat-day-divider">No messages yet — say hi! 👋</div>';
     return;
@@ -1173,13 +1485,15 @@ function renderMessages() {
     const dateStr = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
     if (dateStr !== lastDate) { html += `<div class="chat-day-divider">${dateStr}</div>`; lastDate = dateStr; }
     const isMine  = msg.author === empName;
-    const initials = (msg.author||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const initials = initialsOf(msg.author);
     const timeStr  = d.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+    // For groups and team, show sender name on non-mine messages. For DMs, name is redundant.
+    const showName = !isMine && activeChatType !== 'dm';
     html += `<div class="msg-wrap ${isMine ? 'mine' : ''}">
       ${!isMine ? `<div class="msg-avatar">${initials}</div>` : ''}
       <div class="msg-bubble">
-        ${!isMine ? `<div class="msg-name">${msg.author}</div>` : ''}
-        <div class="msg-text">${msg.text}</div>
+        ${showName ? `<div class="msg-name">${escHtml(msg.author)}</div>` : ''}
+        <div class="msg-text">${escHtml(msg.text)}</div>
         <div class="msg-time">${timeStr}</div>
       </div>
     </div>`;
@@ -1191,16 +1505,16 @@ function renderMessages() {
 async function sendMessage() {
   const input = document.getElementById('chatInput');
   const text  = input.value.trim();
-  if (!text || !sheetUrl || !empName) return;
+  if (!text || !sheetUrl || !empName || !activeChatChannel) return;
   input.value = '';
+  const ts = Date.now();
   try {
     await fetch(sheetUrl, {
       method: 'POST', mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'sendMessage', channel: activeChatChannel, author: empName, text, ts: Date.now() })
+      body: JSON.stringify({ action: 'sendMessage', channel: activeChatChannel, author: empName, text, ts })
     });
-    // Optimistically add message locally
-    chatMessages.push({ channel: activeChatChannel, author: empName, text, ts: Date.now() });
+    chatMessages.push({ channel: activeChatChannel, author: empName, text, ts });
     renderMessages();
     setTimeout(loadMessages, 1500);
   } catch(e) { toast('Could not send message', 'err'); }
@@ -1209,61 +1523,110 @@ async function sendMessage() {
 function startChatPoll() {
   if (chatPollTimer) clearInterval(chatPollTimer);
   chatPollTimer = setInterval(() => {
-    if (document.getElementById('view-messages').classList.contains('active')) {
-      loadMessages();
+    if (!document.getElementById('view-messages').classList.contains('active')) return;
+    if (activeChatChannel) {
+      loadMessages();        // conversation open — refresh that conversation
+    } else {
+      loadChatsList();       // on chats list — refresh previews
     }
-  }, 8000); // Poll every 8 seconds
+  }, 5000);
 }
 
-async function switchChannel(type, otherUser) {
-  document.querySelectorAll('.chat-chan-btn').forEach(b => b.classList.remove('active'));
-  const label = document.getElementById('chatChannelLabel');
-  if (type === 'group') {
-    activeChatChannel = 'group';
-    document.getElementById('chanBtnGroup').classList.add('active');
-    if (label) label.textContent = 'Team Chat — All Employees';
-  } else {
-    const names = [empName, otherUser].sort();
-    activeChatChannel = 'dm_' + names.join('_').toLowerCase().replace(/[^a-z0-9_]/g,'');
-    if (label) label.textContent = '💬 Direct Message — ' + otherUser;
-    const btn = document.getElementById('dmBtn_' + otherUser.replace(/\s/g,'_'));
-    if (btn) btn.classList.add('active');
-  }
-  document.getElementById('dmPicker').style.display = 'none';
-  chatMessages = [];
-  renderMessages();
-  await loadMessages();
+// ── Group create / edit modal ──────────────────────────────────────
+function showNewGroupModal() {
+  if (!empName) { toast('Set up your profile first', 'err'); return; }
+  groupModalMode = 'create';
+  groupModalEditingId = null;
+  document.getElementById('groupModalTitle').textContent = 'New Group';
+  document.getElementById('groupModalSaveBtn').textContent = 'Create';
+  document.getElementById('groupNameInput').value = '';
+  buildGroupMemberList(new Set([empName])); // creator is preselected and locked
+  document.getElementById('groupModal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('groupNameInput').focus(), 50);
 }
 
-function buildDMButtons() {
-  const wrap = document.getElementById('dmButtons');
-  wrap.innerHTML = '';
+function showEditGroupModal() {
+  if (activeChatType !== 'group') return;
+  const g = myGroups.find(x => x.groupId === activeChatChannel);
+  if (!g) { toast('Group info not loaded', 'err'); return; }
+  groupModalMode = 'edit';
+  groupModalEditingId = g.groupId;
+  document.getElementById('groupModalTitle').textContent = 'Edit Group';
+  document.getElementById('groupModalSaveBtn').textContent = 'Save';
+  document.getElementById('groupNameInput').value = g.name;
+  document.getElementById('groupNameInput').disabled = true; // rename not supported in this pass
+  buildGroupMemberList(new Set(g.members));
+  document.getElementById('groupModal').classList.remove('hidden');
 }
 
-function showDMPicker() {
-  const picker = document.getElementById('dmPicker');
-  const list   = document.getElementById('dmPickerList');
-  picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
-  if (picker.style.display === 'none') return;
+function hideGroupModal() {
+  document.getElementById('groupModal').classList.add('hidden');
+  document.getElementById('groupNameInput').disabled = false;
+}
 
-  const others = CHAT_EMPLOYEES.filter(n => n !== empName);
-  list.innerHTML = others.map(name => {
-    const initials = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    return `<div class="dm-pick-item" data-name="${name}">
-      <div class="dm-pick-avatar">${initials}</div>
-      <div class="dm-pick-name">${name}</div>
+function buildGroupMemberList(preselected) {
+  const list = document.getElementById('groupMemberList');
+  list.innerHTML = CHAT_EMPLOYEES.map(name => {
+    const selected = preselected.has(name);
+    const locked   = (groupModalMode === 'create' && name === empName); // creator can't unselect self
+    return `<div class="group-member-item ${selected ? 'selected' : ''}" data-name="${escAttr(name)}" data-locked="${locked ? '1' : '0'}">
+      <div class="group-member-check">${selected ? '✓' : ''}</div>
+      <div class="group-member-name">${escHtml(name)}${locked ? ' (you)' : ''}</div>
     </div>`;
   }).join('');
-
-  // Attach click handlers safely
-  list.querySelectorAll('.dm-pick-item').forEach(item => {
-    item.addEventListener('click', function() {
-      const name = this.getAttribute('data-name');
-      switchChannel('dm', name);
-      document.getElementById('dmPicker').style.display = 'none';
+  list.querySelectorAll('.group-member-item').forEach(el => {
+    el.addEventListener('click', () => {
+      if (el.dataset.locked === '1') return;
+      el.classList.toggle('selected');
+      el.querySelector('.group-member-check').textContent = el.classList.contains('selected') ? '✓' : '';
     });
   });
 }
+
+async function submitGroupModal() {
+  const name = document.getElementById('groupNameInput').value.trim();
+  if (groupModalMode === 'create' && !name) { toast('Enter a group name', 'err'); return; }
+  const selected = Array.from(document.querySelectorAll('#groupMemberList .group-member-item.selected'))
+    .map(el => el.dataset.name);
+  if (selected.length < 2) { toast('Pick at least 2 members', 'err'); return; }
+  if (!sheetUrl) { toast('Not connected to spreadsheet', 'err'); return; }
+
+  const btn = document.getElementById('groupModalSaveBtn');
+  btn.disabled = true;
+  try {
+    if (groupModalMode === 'create') {
+      // Match the rest of the portal's fire-and-forget pattern (no-cors means
+      // we can't read the response, but the server still processes it).
+      await fetch(sheetUrl, {
+        method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'createGroup', name, creator: empName, members: selected })
+      });
+      toast('Group created', 'ok');
+    } else {
+      await fetch(sheetUrl, {
+        method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'updateGroup', groupId: groupModalEditingId, members: selected })
+      });
+      toast('Group updated', 'ok');
+      // Update local cache so the open conversation reflects the change immediately
+      const g = myGroups.find(x => x.groupId === groupModalEditingId);
+      if (g) g.members = selected.slice();
+      if (activeChatChannel === groupModalEditingId) {
+        activeChatMembers = selected.slice();
+        document.getElementById('convSubtitle').textContent = selected.length + ' members';
+      }
+    }
+    hideGroupModal();
+    setTimeout(loadChatsList, 1200); // server needs a moment after appendRow
+  } catch (e) {
+    toast('Could not save group', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 
 // ─────────────────────────────────────────────────────────────
 // JOB FILES
