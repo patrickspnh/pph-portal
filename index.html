@@ -272,6 +272,10 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 .msg-wrap.mine .msg-text { color:var(--navy-deep); }
 .msg-time { font-size:9px; color:var(--muted); margin-top:3px; font-family:'DM Mono',monospace; }
 .msg-wrap.mine .msg-time { color:rgba(13,29,56,0.6); }
+.msg-status { margin-left:6px; padding:1px 5px; border-radius:8px; font-family:'DM Mono',monospace; font-size:9px; font-weight:700; letter-spacing:.04em; }
+.msg-status.sending { color:rgba(13,29,56,0.5); }
+.msg-status.failed  { color:#ef4444; background:rgba(239,68,68,0.12); cursor:pointer; }
+.msg-status.failed:hover { background:rgba(239,68,68,0.22); }
 .chat-input-wrap { display:flex; gap:8px; margin-top:8px; padding:8px 0 4px; background:var(--navy-deep); align-items:center; }
 .chat-input-wrap input { flex:1; padding:11px 14px; background:var(--navy-mid); border:1px solid var(--border-soft); color:var(--text); border-radius:100px; font-size:14px; outline:none; }
 .chat-input-wrap input:focus { border-color:var(--accent); }
@@ -1416,8 +1420,11 @@ function resolveDMOther(channelId) {
 }
 
 function buildDMChannelId(a, b) {
-  const names = [a, b].sort();
-  return 'dm_' + names.join('_').toLowerCase().replace(/[^a-z0-9_]/g, '');
+  // Normalize names defensively — trim, collapse whitespace, lowercase before sorting.
+  // Without this, "Patrick Carlson" and "patrick carlson " produce different channel IDs.
+  const norm = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const names = [norm(a), norm(b)].sort();
+  return 'dm_' + names.join('_').replace(/[^a-z0-9_]/g, '');
 }
 
 function initialsOf(name) {
@@ -1692,6 +1699,8 @@ async function openConversation(channelId, type, displayName) {
 
   // Reset and render
   chatMessages = [];
+  lastRenderedFingerprint = ''; // force first render of the new conversation
+  pendingSends = {};            // clear stale pending sends from previous chat
   document.getElementById('messageList').innerHTML = '<div class="chat-day-divider">Loading…</div>';
   showConversationScreen();
   await loadMessages();
@@ -1703,6 +1712,21 @@ function backToChatsList() {
   loadChatsList(); // refresh previews on the way back
 }
 
+// Track what's currently rendered so we can skip identical re-renders (fixes
+// the blinking that polling caused — re-setting innerHTML 12 times a minute
+// even when nothing changed).
+let lastRenderedFingerprint = '';
+// Track in-flight outgoing messages so we can show a "pending"/"failed" state
+// when no-cors POSTs vanish. Keyed by client timestamp.
+let pendingSends = {};   // ts -> { text, attempts, lastTried }
+
+function messagesFingerprint(msgs) {
+  // Cheap, stable hash: count + last-message ts + last-message text length
+  if (!msgs.length) return '0|0|0';
+  const last = msgs[msgs.length - 1];
+  return msgs.length + '|' + (last.ts || 0) + '|' + ((last.text || '').length) + '|' + (last.attachmentUrl || '').length;
+}
+
 async function loadMessages() {
   if (!sheetUrl || !activeChatChannel) return;
   try {
@@ -1712,19 +1736,43 @@ async function loadMessages() {
     const res  = await fetch(url);
     const data = await res.json();
     if (data && data.messages) {
+      // Detect any local pending sends that the server now confirms — clean them up
+      const serverTimestamps = new Set(data.messages.map(m => m.ts));
+      Object.keys(pendingSends).forEach(ts => {
+        if (serverTimestamps.has(parseInt(ts))) delete pendingSends[ts];
+      });
       chatMessages = data.messages;
+      // Also stitch in any locally-pending messages so the UI keeps them visible
+      // (they get removed once the server confirms above).
+      Object.values(pendingSends).forEach(p => {
+        // Avoid duplicates
+        if (!chatMessages.some(m => m.ts === p.msg.ts)) {
+          chatMessages.push(p.msg);
+        }
+      });
+      chatMessages.sort((a, b) => (a.ts || 0) - (b.ts || 0));
       renderMessages();
     }
   } catch (e) { console.log('Chat load error:', e); }
 }
 
-function renderMessages() {
+function renderMessages(force) {
   const list = document.getElementById('messageList');
   if (!list) return;
   if (!chatMessages.length) {
-    list.innerHTML = '<div class="chat-day-divider">No messages yet — say hi! 👋</div>';
+    if (lastRenderedFingerprint !== 'empty') {
+      list.innerHTML = '<div class="chat-day-divider">No messages yet — say hi! 👋</div>';
+      lastRenderedFingerprint = 'empty';
+    }
     return;
   }
+
+  // Include pending-send state in fingerprint so retry/failed badges update
+  const pendingState = Object.keys(pendingSends).sort().map(k => k + ':' + pendingSends[k].state).join(',');
+  const fp = messagesFingerprint(chatMessages) + '||' + pendingState;
+  if (!force && fp === lastRenderedFingerprint) return; // nothing changed, skip render
+  lastRenderedFingerprint = fp;
+
   let html = '';
   let lastDate = '';
   chatMessages.forEach(msg => {
@@ -1734,7 +1782,6 @@ function renderMessages() {
     const isMine  = msg.author === empName;
     const initials = initialsOf(msg.author);
     const timeStr  = d.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
-    // For groups and team, show sender name on non-mine messages. For DMs, name is redundant.
     const showName = !isMine && activeChatType !== 'dm';
 
     // Build attachment HTML if the message has one
@@ -1754,13 +1801,21 @@ function renderMessages() {
 
     const textHtml = msg.text ? `<div class="msg-text">${escHtml(msg.text)}</div>` : '';
 
+    // Pending/failed status badge for outgoing messages that haven't been confirmed yet
+    let statusBadge = '';
+    if (isMine && pendingSends[msg.ts]) {
+      const state = pendingSends[msg.ts].state;
+      if (state === 'sending')  statusBadge = '<span class="msg-status sending" title="Sending…">…</span>';
+      if (state === 'failed')   statusBadge = `<span class="msg-status failed" onclick="retrySend(${msg.ts})" title="Tap to retry">↻ failed</span>`;
+    }
+
     html += `<div class="msg-wrap ${isMine ? 'mine' : ''}">
       ${!isMine ? `<div class="msg-avatar">${initials}</div>` : ''}
       <div class="msg-bubble">
         ${showName ? `<div class="msg-name">${escHtml(msg.author)}</div>` : ''}
         ${attachHtml}
         ${textHtml}
-        <div class="msg-time">${timeStr}</div>
+        <div class="msg-time">${timeStr}${statusBadge}</div>
       </div>
     </div>`;
   });
@@ -1781,22 +1836,85 @@ async function sendMessage() {
   const ts = Date.now();
   const attachment = pendingAttachment;
   clearPendingAttachment();
+
+  // Optimistic local message
+  const msg = {
+    channel: activeChatChannel, author: empName, text, ts,
+    attachmentUrl:  attachment ? attachment.url  : '',
+    attachmentType: attachment ? attachment.type : '',
+    attachmentName: attachment ? attachment.name : ''
+  };
+  chatMessages.push(msg);
+  pendingSends[ts] = { msg, state: 'sending', text, attachment, attempts: 1, lastTried: Date.now() };
+  renderMessages(true);
+
+  // Fire the send — we use no-cors so we can't read the response, but we will
+  // confirm via the next polling cycle (loadMessages clears it from pendingSends
+  // when the server returns the message).
   try {
     await fetch(sheetUrl, {
       method: 'POST', mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'sendMessage', channel: activeChatChannel, author: empName, text, ts, attachment })
     });
-    // Optimistic local render
-    chatMessages.push({
-      channel: activeChatChannel, author: empName, text, ts,
-      attachmentUrl:  attachment ? attachment.url  : '',
-      attachmentType: attachment ? attachment.type : '',
-      attachmentName: attachment ? attachment.name : ''
+  } catch (e) {
+    // Network error before fetch even left the browser
+    if (pendingSends[ts]) {
+      pendingSends[ts].state = 'failed';
+      renderMessages(true);
+    }
+    toast('Send failed — tap retry on the message', 'err');
+    return;
+  }
+
+  // Confirm after 4 seconds (allows for the next poll cycle to pick it up)
+  setTimeout(() => {
+    if (pendingSends[ts] && pendingSends[ts].state === 'sending') {
+      // Server hasn't returned the message yet — try one more poll, then if
+      // still missing, mark failed.
+      loadMessages().then(() => {
+        if (pendingSends[ts] && pendingSends[ts].state === 'sending') {
+          pendingSends[ts].state = 'failed';
+          renderMessages(true);
+        }
+      });
+    }
+  }, 4000);
+
+  // Trigger a poll sooner than the regular cycle to confirm fast
+  setTimeout(loadMessages, 1500);
+}
+
+// Retry a failed send. Called when the user taps the "↻ failed" badge.
+async function retrySend(ts) {
+  const p = pendingSends[ts];
+  if (!p) return;
+  p.state = 'sending';
+  p.attempts++;
+  p.lastTried = Date.now();
+  renderMessages(true);
+  try {
+    await fetch(sheetUrl, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'sendMessage', channel: activeChatChannel, author: empName, text: p.text, ts, attachment: p.attachment })
     });
-    renderMessages();
-    setTimeout(loadMessages, 1500);
-  } catch(e) { toast('Could not send message', 'err'); }
+  } catch (e) {
+    p.state = 'failed';
+    renderMessages(true);
+    return;
+  }
+  setTimeout(() => {
+    if (pendingSends[ts] && pendingSends[ts].state === 'sending') {
+      loadMessages().then(() => {
+        if (pendingSends[ts] && pendingSends[ts].state === 'sending') {
+          pendingSends[ts].state = 'failed';
+          renderMessages(true);
+        }
+      });
+    }
+  }, 4000);
+  setTimeout(loadMessages, 1500);
 }
 
 // ── Attachment flow ────────────────────────────────────────────────
