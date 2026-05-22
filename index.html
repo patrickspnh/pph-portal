@@ -977,6 +977,7 @@ let calcHrs     = null;
 let announcements = JSON.parse(localStorage.getItem('pph_ann') || '[]');
 let lastAnnCheck  = parseInt(localStorage.getItem('pph_ann_check') || '0');
 let notifToken    = localStorage.getItem('pph_notif_token') || '';
+let unreadCount   = 0;     // referenced by updateHomeScreen; reserved for a future unread-badge feature
 
 // ─── BOOT ───────────────────────────────────────────────────────────
 (function init() {
@@ -1229,7 +1230,6 @@ let activeChatName    = '';     // display name for header
 let activeChatMembers = null;   // for groups: array of names; null otherwise
 let chatMessages      = [];
 let chatPollTimer     = null;
-let unreadCount       = 0;     // referenced by updateHomeScreen; reserved for a future unread-badge feature
 let groupModalMode    = 'create'; // 'create' | 'edit'
 let groupModalEditingId = null;
 
