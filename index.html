@@ -424,17 +424,41 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 .scan-cancel-btn { background:none; border:none; color:var(--muted); font-size:14px; font-weight:600; cursor:pointer; padding:6px 10px; }
 .scan-apply-btn { background:var(--accent); border:none; color:var(--navy-deep); font-size:14px; font-weight:700; cursor:pointer; padding:8px 16px; border-radius:8px; }
 .scan-apply-btn:disabled { opacity:0.4; cursor:not-allowed; }
-.scan-stage { flex:1; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; padding:12px; }
+.scan-stage { flex:1; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; padding:12px; touch-action:none; }
 .scan-stage canvas { max-width:100%; max-height:100%; display:block; }
 .scan-corners-svg { position:absolute; inset:0; pointer-events:none; }
 #scanPolygon { fill:rgba(79,163,224,0.12); stroke:var(--accent); stroke-width:2; pointer-events:none; }
-/* Invisible hit area — large for easy finger tapping */
-.scan-handle-hit { fill:rgba(0,0,0,0.001); stroke:none; pointer-events:auto; cursor:grab; touch-action:none; }
+/* HTML hit-area: large invisible square centered on each corner. 60px is big enough
+   for reliable finger taps even with small overlap. Transparent background but
+   real layout, so iOS Safari hit-tests it without ambiguity. */
+.scan-handle-hit {
+  position:absolute;
+  width:60px; height:60px;
+  transform:translate(-50%, -50%);  /* center on the corner point */
+  background:transparent;
+  cursor:grab;
+  touch-action:none;
+  z-index:10;
+  display:flex; align-items:center; justify-content:center;
+  -webkit-tap-highlight-color:transparent;
+}
 .scan-handle-hit:active { cursor:grabbing; }
-/* Visible handle — smaller for a clean look. pointer-events:none so the hit-area
-   underneath catches the press (otherwise small visible circle would steal the event). */
-.scan-handle { fill:var(--accent); stroke:#fff; stroke-width:2.5; pointer-events:none; transition:r 0.1s, filter 0.1s; }
-.scan-handle.dragging { fill:#fff; stroke:var(--accent); filter:drop-shadow(0 0 8px rgba(79,163,224,0.6)); }
+/* The visible dot inside the hit area */
+.scan-handle-dot {
+  width:22px; height:22px;
+  border-radius:50%;
+  background:var(--accent);
+  border:2.5px solid #fff;
+  box-shadow:0 2px 8px rgba(0,0,0,0.5);
+  pointer-events:none;
+  transition:transform 0.1s, background 0.1s;
+}
+.scan-handle-hit.dragging .scan-handle-dot {
+  transform:scale(1.4);
+  background:#fff;
+  border-color:var(--accent);
+  box-shadow:0 0 16px rgba(79,163,224,0.7);
+}
 .scan-instructions { padding:12px 16px calc(12px + env(safe-area-inset-bottom)); background:var(--navy-deep); color:var(--muted); font-size:12px; text-align:center; border-top:1px solid var(--border-soft); }
 
 /* ── DAY VIEW ── */
@@ -1084,19 +1108,15 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
   </div>
   <div class="scan-stage" id="scanStage">
     <canvas id="scanCanvas"></canvas>
+    <!-- SVG is used only for the polygon outline — touch handling moved to HTML divs below -->
     <svg id="scanCorners" class="scan-corners-svg">
       <polygon id="scanPolygon" />
-      <!-- Invisible hit-area circles (large) sit behind the visible handles for easier touch -->
-      <circle class="scan-handle-hit" data-idx="0" r="28" />
-      <circle class="scan-handle-hit" data-idx="1" r="28" />
-      <circle class="scan-handle-hit" data-idx="2" r="28" />
-      <circle class="scan-handle-hit" data-idx="3" r="28" />
-      <!-- Visible handles (small) -->
-      <circle class="scan-handle" data-idx="0" r="12" />
-      <circle class="scan-handle" data-idx="1" r="12" />
-      <circle class="scan-handle" data-idx="2" r="12" />
-      <circle class="scan-handle" data-idx="3" r="12" />
     </svg>
+    <!-- HTML hit-area divs — much more reliable touch targets on mobile Safari than SVG circles -->
+    <div class="scan-handle-hit" data-idx="0"><div class="scan-handle-dot"></div></div>
+    <div class="scan-handle-hit" data-idx="1"><div class="scan-handle-dot"></div></div>
+    <div class="scan-handle-hit" data-idx="2"><div class="scan-handle-dot"></div></div>
+    <div class="scan-handle-hit" data-idx="3"><div class="scan-handle-dot"></div></div>
   </div>
   <div class="scan-instructions">
     Drag each corner to the edges of the receipt, then tap <b>Apply</b>.
@@ -2504,6 +2524,7 @@ function openScanEditor(img) {
       img,
       canvas,
       ctx,
+      stage,
       corners,
       dispW, dispH,
       scaleToOriginal: img.width / dispW,
@@ -2516,72 +2537,100 @@ function openScanEditor(img) {
 
 function drawScanOverlay() {
   if (!scanState) return;
-  const { corners } = scanState;
+  const { corners, canvas, stage } = scanState;
+
+  // Update the SVG polygon (still in canvas coords via viewBox)
   const poly = document.getElementById('scanPolygon');
   poly.setAttribute('points',
     corners.map(c => c.x + ',' + c.y).join(' ')
   );
-  // Move both the visible handle AND its invisible hit-area together
-  const allCircles = document.querySelectorAll('.scan-handle, .scan-handle-hit');
-  allCircles.forEach(h => {
+
+  // Position the HTML hit-area divs. These live in the .scan-stage container
+  // so we need each corner's position in stage-relative pixels.
+  // canvas is centered in the stage; corners are in canvas coordinate space (= dispW x dispH).
+  const stageRect  = stage.getBoundingClientRect();
+  const canvasRect = canvas.getBoundingClientRect();
+  const offsetX = canvasRect.left - stageRect.left;
+  const offsetY = canvasRect.top  - stageRect.top;
+  const scaleX  = canvasRect.width  / scanState.dispW;
+  const scaleY  = canvasRect.height / scanState.dispH;
+
+  document.querySelectorAll('.scan-handle-hit').forEach(h => {
     const idx = parseInt(h.getAttribute('data-idx'), 10);
-    h.setAttribute('cx', corners[idx].x);
-    h.setAttribute('cy', corners[idx].y);
+    const x = offsetX + corners[idx].x * scaleX;
+    const y = offsetY + corners[idx].y * scaleY;
+    h.style.left = x + 'px';
+    h.style.top  = y + 'px';
   });
 }
 
 function attachScanHandleListeners() {
-  // Bind to the larger invisible hit-area circles, not the small visible ones
   const hits = document.querySelectorAll('.scan-handle-hit');
   hits.forEach(h => {
-    h.onpointerdown = startCornerDrag;
+    // Touch events first — most reliable on iOS Safari. Fall back to mouse for desktop.
+    h.addEventListener('touchstart', startCornerDragTouch, { passive: false });
+    h.addEventListener('mousedown',  startCornerDragMouse);
   });
 }
 
-function startCornerDrag(e) {
-  e.preventDefault();
-  if (!scanState) return;
-  const idx    = parseInt(e.target.getAttribute('data-idx'), 10);
-  const svg    = document.getElementById('scanCorners');
-  const rect   = svg.getBoundingClientRect();
-  const dispW  = scanState.dispW;
-  const dispH  = scanState.dispH;
+// Shared drag-state during an active drag
+let scanDragIdx = -1;
+let scanDragHandle = null;
 
-  // Highlight the active handle so it's visible above the finger
-  const visibleHandle = document.querySelector('.scan-handle[data-idx="' + idx + '"]');
-  if (visibleHandle) {
-    visibleHandle.classList.add('dragging');
-    visibleHandle.setAttribute('r', '14'); // grow slightly while dragging
-  }
-
-  // Capture the pointer so we keep getting events even if the finger drifts
-  // off the original hit circle.
-  try { e.target.setPointerCapture(e.pointerId); } catch(_) {}
-
-  function move(ev) {
-    ev.preventDefault();
-    const xPx = (ev.clientX - rect.left);
-    const yPx = (ev.clientY - rect.top);
-    const x = Math.max(0, Math.min(dispW, xPx * (dispW / rect.width)));
-    const y = Math.max(0, Math.min(dispH, yPx * (dispH / rect.height)));
-    scanState.corners[idx] = { x, y };
-    drawScanOverlay();
-  }
-
-  function end() {
-    document.removeEventListener('pointermove', move);
-    document.removeEventListener('pointerup', end);
-    document.removeEventListener('pointercancel', end);
-    if (visibleHandle) {
-      visibleHandle.classList.remove('dragging');
-      visibleHandle.setAttribute('r', '12');
-    }
-  }
-
-  document.addEventListener('pointermove', move, { passive: false });
-  document.addEventListener('pointerup',   end);
-  document.addEventListener('pointercancel', end);
+function dragMoveCommon(clientX, clientY) {
+  if (!scanState || scanDragIdx < 0) return;
+  const canvasRect = scanState.canvas.getBoundingClientRect();
+  // Convert from screen pixels to canvas coords (= dispW x dispH)
+  const x = Math.max(0, Math.min(scanState.dispW, (clientX - canvasRect.left) * (scanState.dispW / canvasRect.width)));
+  const y = Math.max(0, Math.min(scanState.dispH, (clientY - canvasRect.top)  * (scanState.dispH / canvasRect.height)));
+  scanState.corners[scanDragIdx] = { x, y };
+  drawScanOverlay();
 }
+
+function dragEnd() {
+  if (scanDragHandle) scanDragHandle.classList.remove('dragging');
+  scanDragIdx    = -1;
+  scanDragHandle = null;
+  document.removeEventListener('touchmove',   handleTouchMove, { passive: false });
+  document.removeEventListener('touchend',    handleTouchEnd);
+  document.removeEventListener('touchcancel', handleTouchEnd);
+  document.removeEventListener('mousemove',   handleMouseMove);
+  document.removeEventListener('mouseup',     handleMouseUp);
+}
+
+// ── Touch handlers ──
+function startCornerDragTouch(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  if (!scanState || !e.touches || !e.touches.length) return;
+  scanDragIdx = parseInt(e.currentTarget.getAttribute('data-idx'), 10);
+  scanDragHandle = e.currentTarget;
+  scanDragHandle.classList.add('dragging');
+  document.addEventListener('touchmove',   handleTouchMove, { passive: false });
+  document.addEventListener('touchend',    handleTouchEnd);
+  document.addEventListener('touchcancel', handleTouchEnd);
+}
+function handleTouchMove(e) {
+  if (!e.touches || !e.touches.length) return;
+  e.preventDefault();
+  const t = e.touches[0];
+  dragMoveCommon(t.clientX, t.clientY);
+}
+function handleTouchEnd() { dragEnd(); }
+
+// ── Mouse handlers (desktop) ──
+function startCornerDragMouse(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  if (!scanState) return;
+  scanDragIdx = parseInt(e.currentTarget.getAttribute('data-idx'), 10);
+  scanDragHandle = e.currentTarget;
+  scanDragHandle.classList.add('dragging');
+  document.addEventListener('mousemove', handleMouseMove);
+  document.addEventListener('mouseup',   handleMouseUp);
+}
+function handleMouseMove(e) { dragMoveCommon(e.clientX, e.clientY); }
+function handleMouseUp()    { dragEnd(); }
 
 function cancelScan() {
   document.getElementById('scanEditor').classList.add('hidden');
