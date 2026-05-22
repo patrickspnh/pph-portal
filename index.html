@@ -1229,6 +1229,7 @@ let activeChatName    = '';     // display name for header
 let activeChatMembers = null;   // for groups: array of names; null otherwise
 let chatMessages      = [];
 let chatPollTimer     = null;
+let unreadCount       = 0;     // referenced by updateHomeScreen; reserved for a future unread-badge feature
 let groupModalMode    = 'create'; // 'create' | 'edit'
 let groupModalEditingId = null;
 
