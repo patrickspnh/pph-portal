@@ -485,27 +485,51 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 .sched-view-btn.active { background:var(--accent); color:var(--navy-deep); border-color:var(--accent); }
 .sched-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
 .sched-nav-btn { background:var(--navy-mid); border:1px solid var(--border-soft); color:var(--text); width:36px; height:36px; border-radius:10px; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
-.sched-nav-btn:hover { border-color:var(--accent); color:var(--accent); }
-.sched-week-label { font-size:14px; font-weight:700; color:var(--text); text-align:center; }
-.sched-day { background:var(--navy-mid); border:1px solid var(--border-soft); border-radius:14px; padding:12px 14px; margin-bottom:10px; }
-.sched-day.today { border-color:var(--accent); }
-.sched-day-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
-.sched-day-name { font-size:13px; font-weight:700; color:var(--text); }
-.sched-day-date { font-size:11px; color:var(--muted); font-family:'DM Mono',monospace; }
-.sched-add-btn { background:none; border:1px dashed var(--border-soft); color:var(--muted); border-radius:8px; padding:4px 10px; font-size:11px; cursor:pointer; transition:all 0.2s; }
-.sched-add-btn:hover { border-color:var(--accent); color:var(--accent); }
-.sched-shift { display:flex; align-items:center; gap:8px; background:var(--navy-dark); border-radius:10px; padding:8px 10px; margin-bottom:6px; }
-.sched-shift-avatar { width:26px; height:26px; border-radius:50%; background:var(--navy); border:1px solid var(--border-soft); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--accent); flex-shrink:0; }
-.sched-shift-body { flex:1; min-width:0; }
-.sched-shift-name { font-size:12px; font-weight:700; }
-.sched-shift-detail { font-size:11px; color:var(--muted); font-family:'DM Mono',monospace; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.sched-shift-del { background:none; border:none; color:var(--muted); font-size:16px; cursor:pointer; padding:2px 4px; transition:color 0.2s; }
-.sched-shift-del:hover { color:var(--danger); }
 .sched-empty { font-size:12px; color:var(--muted); font-style:italic; padding:4px 0; }
-.shift-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:200; display:flex; align-items:flex-end; justify-content:center; padding-bottom:env(safe-area-inset-bottom); }
-.shift-modal { background:var(--navy-mid); border:1px solid var(--border-soft); border-radius:20px 20px 0 0; padding:20px 16px; width:100%; max-width:430px; animation:slideUp 0.25s ease both; }
-@keyframes slideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
-.shift-modal-title { font-size:16px; font-weight:800; margin-bottom:14px; }
+
+/* ── SCHEDULE — calendar view ── */
+.sched-strip-wrap { display:flex; align-items:center; gap:4px; margin-bottom:14px; }
+.sched-nav { width:32px; height:54px; flex-shrink:0; background:transparent; border:none; color:var(--muted); font-size:22px; cursor:pointer; border-radius:8px; transition:background 0.15s, color 0.15s; }
+.sched-nav:hover { background:rgba(255,255,255,0.05); color:var(--accent); }
+.sched-strip { flex:1; display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+.sched-day-cell { background:transparent; border:1px solid transparent; color:var(--text); padding:6px 0 4px; border-radius:10px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:2px; transition:all 0.15s; font-family:inherit; }
+.sched-day-cell:hover { background:rgba(255,255,255,0.04); }
+.sched-day-cell.today { border-color:rgba(79,163,224,0.4); }
+.sched-day-cell.selected { background:var(--accent); color:var(--navy-deep); border-color:var(--accent); }
+.sched-day-cell.selected:hover { background:var(--accent); }
+.sched-day-name { font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; opacity:0.85; }
+.sched-day-num { font-size:18px; font-weight:700; line-height:1; }
+.sched-day-dot { width:4px; height:4px; border-radius:50%; background:var(--accent); margin-top:2px; }
+.sched-day-cell.selected .sched-day-dot { background:var(--navy-deep); }
+.sched-day-dot.empty { background:transparent; }
+.sched-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; padding:0 2px; }
+.sched-day-label { font-size:15px; font-weight:700; color:var(--text); }
+.sched-filter-btn { background:transparent; border:1px solid var(--border-soft); color:var(--muted); border-radius:100px; padding:5px 14px; font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; cursor:pointer; transition:all 0.15s; font-family:inherit; }
+.sched-filter-btn:hover { border-color:var(--accent); color:var(--accent); }
+.sched-filter-btn.active { background:var(--accent); color:var(--navy-deep); border-color:var(--accent); }
+.sched-events { display:flex; flex-direction:column; gap:8px; }
+.sched-event-card { background:var(--navy-mid); border:1px solid var(--border-soft); border-left:3px solid var(--accent); border-radius:10px; padding:10px 12px; }
+.sched-event-title { font-size:14px; font-weight:700; color:var(--text); margin-bottom:4px; line-height:1.3; }
+.sched-event-meta { display:flex; gap:10px; flex-wrap:wrap; align-items:center; font-size:11px; }
+.sched-event-time { color:var(--muted); font-family:'DM Mono',monospace; }
+.sched-event-cal { font-weight:700; }
+.sched-event-loc { font-size:11px; color:var(--muted); margin-top:6px; }
+.sched-loading { text-align:center; padding:20px; color:var(--muted); font-size:13px; }
+.sched-error { padding:12px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:10px; color:#fca5a5; font-size:12px; }
+.sched-empty-state { text-align:center; padding:28px 16px; background:var(--navy-mid); border:1px solid var(--border-soft); border-radius:14px; }
+.sched-empty-state.hidden { display:none; }
+.sched-external-link { display:block; text-align:center; margin-top:14px; font-size:12px; color:var(--muted); text-decoration:none; }
+.sched-external-link:hover { color:var(--accent); }
+
+/* ── Calendar Sources picker (in Settings) ── */
+.cal-sources-list { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+.cal-sources-loading { color:var(--muted); font-size:12px; padding:8px 0; }
+.cal-source-row { display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--navy-mid); border:1px solid var(--border-soft); border-radius:10px; cursor:pointer; transition:background 0.15s; }
+.cal-source-row:hover { background:rgba(255,255,255,0.04); }
+.cal-source-row input[type="checkbox"] { width:18px; height:18px; flex-shrink:0; accent-color:var(--accent); }
+.cal-source-swatch { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+.cal-source-name { flex:1; font-size:13px; color:var(--text); }
+.cal-source-tag { font-size:10px; color:var(--muted); font-family:'DM Mono',monospace; text-transform:uppercase; }
 
 /* ── NAV ADJUSTMENT for 6 tabs ── */
 .bottom-nav { padding-bottom: env(safe-area-inset-bottom); }
@@ -786,6 +810,16 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 
       <div class="divider"></div>
 
+      <!-- Calendar Sources picker -->
+      <div class="s-title">Calendar Sources</div>
+      <div class="s-desc">Pick which Google Calendars to show on your Schedule tab. This setting is per-device.</div>
+      <div id="calSourcesList" class="cal-sources-list">
+        <div class="cal-sources-loading">Loading calendars…</div>
+      </div>
+      <button class="btn-save" onclick="loadCalendarSources()" style="margin-top:8px;">Refresh list</button>
+
+      <div class="divider"></div>
+
       <!-- Admin section — hidden behind PIN -->
       <div id="adminSection" style="display:none;">
         <div class="s-title">Admin — Manage Jobs</div>
@@ -901,27 +935,33 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 
     <!-- ═══ SCHEDULE ═══ -->
     <div class="view" id="view-schedule">
-      <!-- View toggle buttons that change the calendar mode -->
-      <div style="display:flex;gap:5px;margin-bottom:10px;">
-        <button class="sched-view-btn" onclick="setCalView('day')">Day</button>
-        <button class="sched-view-btn active" id="calViewWeek" onclick="setCalView('week')">Week</button>
-        <button class="sched-view-btn" onclick="setCalView('month')">Month</button>
-        <button class="sched-view-btn" onclick="setCalView('agenda')">Agenda</button>
+
+      <!-- Week strip: 7 days, today highlighted, dot under days that have events -->
+      <div class="sched-strip-wrap">
+        <button class="sched-nav" onclick="changeSchedWeek(-1)" aria-label="Previous week">‹</button>
+        <div class="sched-strip" id="schedStrip"></div>
+        <button class="sched-nav" onclick="changeSchedWeek(1)" aria-label="Next week">›</button>
       </div>
 
-      <!-- Embedded Google Calendar -->
-      <div style="position:relative;width:100%;border-radius:14px;overflow:hidden;border:1px solid var(--border-soft);">
-        <iframe id="googleCalFrame"
-          src="https://calendar.google.com/calendar/embed?src=patrickspnh%40gmail.com&ctz=America%2FChicago&mode=WEEK&showTitle=0&showNav=1&showDate=1&showPrint=0&showTabs=0&showCalendars=0&showTz=0&bgcolor=%231a3260&color=%234fa3e0"
-          style="width:100%;height:calc(100dvh - 200px);border:none;display:block;"
-          frameborder="0"
-          scrolling="no">
-        </iframe>
+      <!-- Filter + selected day header -->
+      <div class="sched-header">
+        <div id="schedDayLabel" class="sched-day-label">Today</div>
+        <button id="schedFilterBtn" class="sched-filter-btn" onclick="toggleSchedFilter()">All</button>
       </div>
 
-      <!-- Open in Google Calendar button -->
-      <a href="https://calendar.google.com/calendar/r" target="_blank"
-        style="display:block;text-align:center;margin-top:10px;font-size:12px;color:var(--muted);text-decoration:none;">
+      <!-- Connection / setup hint shown when no calendars are selected yet -->
+      <div id="schedNoCalendars" class="sched-empty-state hidden">
+        <div style="font-size:36px;margin-bottom:8px;">📅</div>
+        <div style="font-weight:700;margin-bottom:6px;">No calendars selected</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">Pick which Google Calendars to show in <b>Settings → Calendar Sources</b>.</div>
+        <button class="btn-submit" onclick="showTab('setup')" style="display:inline-block;padding:8px 16px;">Open Settings</button>
+      </div>
+
+      <!-- Events for the selected day -->
+      <div id="schedEvents" class="sched-events"></div>
+
+      <!-- Open in Google Calendar link -->
+      <a href="https://calendar.google.com/calendar/r" target="_blank" class="sched-external-link">
         ↗ Open in Google Calendar
       </a>
     </div>
@@ -1252,6 +1292,8 @@ function showTab(name) {
   if (name === 'history')  { renderHistory(); fetchHistoryFromSheet(); }
   if (name === 'messages') { initChat(); }
   if (name === 'jobs')     { initJobsTab(); fetchJobsFromSheet(); }
+  if (name === 'schedule') { initSchedule(); }
+  if (name === 'setup')    { if (sheetUrl) loadCalendarSources(); }
   if (name === 'home')     { updateHomeScreen(); }
 }
 
@@ -2941,337 +2983,247 @@ function renderReceipts() {
       </div>
     </div>`).join('');
 }
-function setCalView(mode) {
-  document.querySelectorAll('.sched-view-btn').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
-  const modeMap = { day:'DAY', week:'WEEK', month:'MONTH', agenda:'AGENDA' };
-  const calMode = modeMap[mode] || 'WEEK';
-  const frame   = document.getElementById('googleCalFrame');
-  if (frame) {
-    frame.src = `https://calendar.google.com/calendar/embed?src=patrickspnh%40gmail.com&ctz=America%2FChicago&mode=${calMode}&showTitle=0&showNav=1&showDate=1&showPrint=0&showTabs=0&showCalendars=0&showTz=0&bgcolor=%231a3260&color=%234fa3e0`;
-  }
+// ─── SCHEDULE — Google Calendar integration ─────────────────────────
+const SCHED_DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+let schedWeekStart = null;                  // Date object: start of currently-displayed week (Sunday)
+let schedSelectedDate = null;               // YYYY-MM-DD string
+let schedEventsByDate = {};                 // 'YYYY-MM-DD' -> [event, ...] for current week
+let schedSelectedCalendarIds = JSON.parse(localStorage.getItem('pph_sched_cals') || '[]');
+let schedFilterMine = false;                // false=show all, true=filter to my events
+
+function ymdString(d) {
+  const yr = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
+  const da = String(d.getDate()).padStart(2, '0');
+  return yr + '-' + mo + '-' + da;
 }
-let scheduleData    = JSON.parse(localStorage.getItem('pph_schedule') || '{}');
-let schedWeekOffset = 0;
-let editingDay      = null;
-let schedView       = 'week'; // day, week, month, year
 
-const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+function startOfWeek(d) {
+  const out = new Date(d);
+  out.setHours(0, 0, 0, 0);
+  out.setDate(out.getDate() - out.getDay()); // back up to Sunday
+  return out;
+}
 
-function getWeekDates(offset) {
-  const today = new Date();
-  const day   = today.getDay();
-  const dates = [];
+async function initSchedule() {
+  if (!schedWeekStart) {
+    schedWeekStart    = startOfWeek(new Date());
+    schedSelectedDate = ymdString(new Date());
+  }
+  renderSchedStrip();
+  // If no calendars selected, show the empty-state prompt
+  if (!schedSelectedCalendarIds.length) {
+    document.getElementById('schedNoCalendars').classList.remove('hidden');
+    document.getElementById('schedEvents').innerHTML = '';
+    return;
+  }
+  document.getElementById('schedNoCalendars').classList.add('hidden');
+  await loadSchedWeek();
+  renderSchedEvents();
+}
+
+function renderSchedStrip() {
+  const strip = document.getElementById('schedStrip');
+  if (!strip) return;
+  const todayYmd = ymdString(new Date());
+  let html = '';
   for (let i = 0; i < 7; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - day + i + (offset * 7));
-    d.setHours(0,0,0,0);
-    dates.push(d);
+    const d  = new Date(schedWeekStart);
+    d.setDate(d.getDate() + i);
+    const key  = ymdString(d);
+    const isToday    = (key === todayYmd);
+    const isSelected = (key === schedSelectedDate);
+    const hasEvents  = (schedEventsByDate[key] || []).length > 0;
+    html += `<button class="sched-day-cell ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''}" onclick="selectSchedDate('${key}')">
+      <div class="sched-day-name">${SCHED_DAY_NAMES[i]}</div>
+      <div class="sched-day-num">${d.getDate()}</div>
+      ${hasEvents ? '<div class="sched-day-dot"></div>' : '<div class="sched-day-dot empty"></div>'}
+    </button>`;
   }
-  return dates;
+  strip.innerHTML = html;
 }
 
-function renderSchedule() {
-  const today   = new Date(); today.setHours(0,0,0,0);
-  let dates     = [];
-  let labelText = '';
+function selectSchedDate(key) {
+  schedSelectedDate = key;
+  renderSchedStrip();
+  renderSchedEvents();
+}
 
-  if (schedView === 'day') {
-    const d = new Date(today); d.setDate(d.getDate() + schedWeekOffset);
-    dates     = [d];
-    labelText = d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+async function changeSchedWeek(direction) {
+  schedWeekStart = new Date(schedWeekStart);
+  schedWeekStart.setDate(schedWeekStart.getDate() + direction * 7);
+  // Move selected day to same day-of-week in new week
+  const newSel = new Date(schedWeekStart);
+  const oldDow = schedSelectedDate ? new Date(schedSelectedDate + 'T12:00').getDay() : 0;
+  newSel.setDate(newSel.getDate() + oldDow);
+  schedSelectedDate = ymdString(newSel);
+  renderSchedStrip();
+  document.getElementById('schedEvents').innerHTML = '<div class="sched-loading">Loading events…</div>';
+  await loadSchedWeek();
+  renderSchedStrip();
+  renderSchedEvents();
+}
 
-  } else if (schedView === 'week') {
-    dates     = getWeekDates(schedWeekOffset);
-    const s   = dates[0].toLocaleDateString('en-US', { month:'short', day:'numeric' });
-    const e   = dates[6].toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
-    labelText = s + ' – ' + e;
-
-  } else if (schedView === 'month') {
-    const base = new Date(today.getFullYear(), today.getMonth() + schedWeekOffset, 1);
-    labelText  = base.toLocaleDateString('en-US', { month:'long', year:'numeric' });
-
-  } else if (schedView === 'year') {
-    const year = today.getFullYear() + schedWeekOffset;
-    for (let m = 0; m < 12; m++) dates.push(new Date(year, m, 1));
-    labelText = String(year);
+async function loadSchedWeek() {
+  if (!sheetUrl || !schedSelectedCalendarIds.length) {
+    schedEventsByDate = {};
+    return;
   }
-
-  document.getElementById('schedWeekLabel').textContent = labelText;
-
-  // Build job/emp options in modal
-  const jobSel = document.getElementById('shiftJob');
-  jobSel.innerHTML = '<option value="" disabled selected>— Select job —</option>' +
-    jobs.map(j => `<option value="${j}">${j}</option>`).join('') +
-    '<option value="Office / Shop">Office / Shop</option>' +
-    '<option value="Day Off">🏖 Day Off</option>';
-  const empSel = document.getElementById('shiftEmp');
-  empSel.innerHTML = '<option value="" disabled selected>— Select employee —</option>' +
-    ['Patrick Carlson','Nick Voelker','Trent Carlson','Donnie Nicely',
-     'Jerry Erickson','William Carlson','Adrian Walli','Morgan Ruohonen','Jess Erickson']
-    .map(n => `<option value="${n}">${n}</option>`).join('');
-
-  const container = document.getElementById('schedDays');
-
-  // ── DAY VIEW ──
-  if (schedView === 'day') {
-    const date = dates[0];
-    const key  = date.toISOString().split('T')[0];
-    const shifts = scheduleData[key] || [];
-    const hours = [];
-    for (let h = 6; h <= 20; h++) {
-      const timeLabel = h === 12 ? '12 PM' : h < 12 ? h + ' AM' : (h-12) + ' PM';
-      const hShifts = shifts.filter(s => {
-        const startH = parseInt((s.start||'00:00').split(':')[0]);
-        return startH === h;
-      });
-      hours.push(`<div class="day-hour-row">
-        <div class="day-hour-label">${timeLabel}</div>
-        <div class="day-hour-slot" onclick="openShiftModalWithTime('${key}','${String(h).padStart(2,'0')}:00')">
-          ${hShifts.map((s,i) => `
-            <div class="day-shift-chip">
-              <span>${s.emp.split(' ')[0]} · ${s.job}</span>
-              <button onclick="event.stopPropagation();deleteShift('${key}',${shifts.indexOf(s)})" style="background:none;border:none;color:rgba(255,255,255,0.6);font-size:14px;cursor:pointer;padding:0 0 0 6px;">×</button>
-            </div>`).join('')}
-          ${hShifts.length === 0 ? '<div class="day-hour-empty">+ tap to add</div>' : ''}
-        </div>
-      </div>`);
-    }
-    container.innerHTML = `<div class="day-view">${hours.join('')}</div>`;
-
-  // ── MONTH VIEW ──
-  } else if (schedView === 'month') {
-    const base      = new Date(today.getFullYear(), today.getMonth() + schedWeekOffset, 1);
-    const year      = base.getFullYear();
-    const mon       = base.getMonth();
-    const firstDay  = base.getDay(); // 0=Sun
-    const daysInMon = new Date(year, mon+1, 0).getDate();
-    const dayNames  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-
-    let grid = `<div class="month-grid">`;
-    // Day name headers
-    dayNames.forEach(d => { grid += `<div class="month-header">${d}</div>`; });
-    // Empty cells before first day
-    for (let i = 0; i < firstDay; i++) grid += `<div class="month-cell empty"></div>`;
-    // Day cells
-    for (let d = 1; d <= daysInMon; d++) {
-      const key      = `${year}-${String(mon+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      const isToday  = key === today.toISOString().split('T')[0];
-      const shifts   = scheduleData[key] || [];
-      grid += `<div class="month-cell ${isToday ? 'month-today' : ''}" onclick="openShiftModal('${key}')">
-        <div class="month-day-num">${d}</div>
-        ${shifts.slice(0,2).map(s => `<div class="month-chip">${s.emp.split(' ')[0]}</div>`).join('')}
-        ${shifts.length > 2 ? `<div class="month-chip-more">+${shifts.length-2}</div>` : ''}
-      </div>`;
-    }
-    grid += `</div>`;
-    container.innerHTML = grid;
-
-  // ── YEAR VIEW ──
-  } else if (schedView === 'year') {
-    container.innerHTML = dates.map(d => {
-      const mon       = d.getMonth();
-      const yr        = d.getFullYear();
-      const monName   = d.toLocaleDateString('en-US', { month:'long' });
-      const daysInMon = new Date(yr, mon+1, 0).getDate();
-      let totalShifts = 0;
-      for (let i = 1; i <= daysInMon; i++) {
-        const key = `${yr}-${String(mon+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
-        totalShifts += (scheduleData[key] || []).length;
-      }
-      return `<div class="sched-day" onclick="setSchedView('month');schedWeekOffset=${mon - today.getMonth()};renderSchedule();" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
-        <div class="sched-day-name">${monName}</div>
-        <div style="font-size:12px;color:var(--muted);">${totalShifts > 0 ? totalShifts + ' shift' + (totalShifts>1?'s':'') : 'No shifts'}</div>
-      </div>`;
-    }).join('');
-
-  // ── WEEK VIEW ──
-  } else {
-    container.innerHTML = dates.map(date => {
-      const key       = date.toISOString().split('T')[0];
-      const isToday   = date.getTime() === today.getTime();
-      const dayName   = DAY_NAMES[date.getDay()];
-      const dayFmt    = date.toLocaleDateString('en-US', { month:'short', day:'numeric' });
-      const shifts    = scheduleData[key] || [];
-      const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-      const shiftsHtml = shifts.length
-        ? shifts.map((s,i) => {
-            const initials = s.emp.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-            return `<div class="sched-shift">
-              <div class="sched-shift-avatar">${initials}</div>
-              <div class="sched-shift-body">
-                <div class="sched-shift-name">${s.emp}</div>
-                <div class="sched-shift-detail">${s.start}–${s.end} · ${s.job}</div>
-                ${s.notes ? `<div class="sched-shift-detail" style="color:var(--text-soft);">${s.notes}</div>` : ''}
-              </div>
-              <button class="sched-shift-del" onclick="deleteShift('${key}',${i})">×</button>
-            </div>`;
-          }).join('')
-        : `<div class="sched-empty">${isWeekend ? 'Weekend' : 'No shifts scheduled'}</div>`;
-      return `<div class="sched-day ${isToday ? 'today' : ''}">
-        <div class="sched-day-hdr">
-          <div>
-            <div class="sched-day-name">${dayName} ${isToday ? '· Today' : ''}</div>
-            <div class="sched-day-date">${dayFmt}</div>
-          </div>
-          <button class="sched-add-btn" onclick="openShiftModal('${key}')">+ Add</button>
-        </div>
-        ${shiftsHtml}
-      </div>`;
-    }).join('');
-  }
-
-  fetchScheduleFromSheet();
-}
-
-function setSchedView(view) {
-  schedView = view;
-  schedWeekOffset = 0;
-  document.querySelectorAll('.sched-view-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('viewBtn-' + view).classList.add('active');
-  renderSchedule();
-}
-
-function changeWeek(dir) {
-  schedWeekOffset += dir;
-  renderSchedule();
-}
-
-function openShiftModal(dateKey) {
-  openShiftModalWithTime(dateKey, '07:00');
-}
-
-function openShiftModalWithTime(dateKey, startTime) {
-  editingDay = dateKey;
-  const date = new Date(dateKey + 'T12:00');
-  document.getElementById('shiftModalTitle').textContent =
-    'Add Shift — ' + date.toLocaleDateString('en-US', { weekday:'long', month:'short', day:'numeric' });
-  document.getElementById('shiftEmp').value   = empName || '';
-  document.getElementById('shiftJob').value   = '';
-  document.getElementById('shiftStart').value = startTime;
-  // Default end time 1 hour later
-  const [h, m] = startTime.split(':').map(Number);
-  const endH = Math.min(h + 1, 23);
-  document.getElementById('shiftEnd').value = String(endH).padStart(2,'0') + ':' + String(m).padStart(2,'0');
-  document.getElementById('shiftNotes').value = '';
-  document.getElementById('shiftModal').style.display = 'flex';
-}
-
-function closeShiftModal() {
-  document.getElementById('shiftModal').style.display = 'none';
-  editingDay = null;
-}
-
-async function saveShift() {
-  const emp   = document.getElementById('shiftEmp').value;
-  const job   = document.getElementById('shiftJob').value;
-  const start = document.getElementById('shiftStart').value;
-  const end   = document.getElementById('shiftEnd').value;
-  const notes = document.getElementById('shiftNotes').value.trim();
-
-  if (!emp)   return toast('Select an employee', 'err');
-  if (!job)   return toast('Select a job', 'err');
-  if (!start || !end) return toast('Set start and end times', 'err');
-
-  const shift = { emp, job, start, end, notes, addedBy: empName };
-
-  if (!scheduleData[editingDay]) scheduleData[editingDay] = [];
-  scheduleData[editingDay].push(shift);
-  localStorage.setItem('pph_schedule', JSON.stringify(scheduleData));
-
-  // Sync to sheet
-  if (sheetUrl) {
-    fetch(sheetUrl, {
-      method: 'POST', mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'saveShift', date: editingDay, shift })
-    }).catch(() => {});
-  }
-
-  closeShiftModal();
-  renderSchedule();
-  toast('✓ Shift saved', 'ok');
-}
-
-function deleteShift(dateKey, idx) {
-  if (!scheduleData[dateKey]) return;
-  const shift = scheduleData[dateKey][idx];
-  scheduleData[dateKey].splice(idx, 1);
-  localStorage.setItem('pph_schedule', JSON.stringify(scheduleData));
-
-  if (sheetUrl && shift) {
-    fetch(sheetUrl, {
-      method: 'POST', mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'deleteShift', date: dateKey, idx, shift })
-    }).catch(() => {});
-  }
-
-  renderSchedule();
-  toast('Shift removed', 'ok');
-}
-
-async function fetchScheduleFromSheet() {
-  if (!sheetUrl) return;
+  const start = ymdString(schedWeekStart);
+  const endDate = new Date(schedWeekStart);
+  endDate.setDate(endDate.getDate() + 6);
+  const end = ymdString(endDate);
   try {
-    const dates  = getWeekDates(schedWeekOffset);
-    const start  = dates[0].toISOString().split('T')[0];
-    const end    = dates[6].toISOString().split('T')[0];
-    const url    = sheetUrl + '?action=getSchedule&start=' + start + '&end=' + end;
-    const res    = await fetch(url);
-    const data   = await res.json();
-    if (data && data.schedule) {
-      // Merge sheet schedule with local
-      Object.keys(data.schedule).forEach(key => {
-        scheduleData[key] = data.schedule[key];
-      });
-      localStorage.setItem('pph_schedule', JSON.stringify(scheduleData));
-      renderScheduleLocal();
-    }
-  } catch(e) {}
+    const url = sheetUrl + '?action=getCalendarEvents'
+      + '&start=' + encodeURIComponent(start)
+      + '&end='   + encodeURIComponent(end)
+      + '&calendarIds=' + encodeURIComponent(schedSelectedCalendarIds.join(','));
+    const res = await fetch(url);
+    const data = await res.json();
+    schedEventsByDate = {};
+    (data.events || []).forEach(ev => {
+      // An event may span multiple days — add it to each day it covers.
+      const evStart = new Date(ev.start);
+      const evEnd   = new Date(ev.end);
+      // Walk day-by-day from start to end
+      const cursor = new Date(evStart);
+      cursor.setHours(0, 0, 0, 0);
+      while (cursor <= evEnd) {
+        const key = ymdString(cursor);
+        if (!schedEventsByDate[key]) schedEventsByDate[key] = [];
+        schedEventsByDate[key].push(ev);
+        cursor.setDate(cursor.getDate() + 1);
+        // For all-day events, getEndTime returns the day AFTER — stop at that
+        if (ev.isAllDay && cursor.getTime() >= evEnd.getTime()) break;
+      }
+    });
+  } catch (e) {
+    console.log('Calendar load error:', e);
+    schedEventsByDate = {};
+    document.getElementById('schedEvents').innerHTML = `<div class="sched-error">Couldn't load events: ${e.message || 'unknown error'}</div>`;
+  }
 }
 
-function renderScheduleLocal() {
-  // Re-render without fetching again
-  const dates   = getWeekDates(schedWeekOffset);
-  const today   = new Date(); today.setHours(0,0,0,0);
-  const container = document.getElementById('schedDays');
-  if (!container) return;
+function eventBelongsToMe(ev) {
+  if (!empName) return false;
+  const first = empName.split(/\s+/)[0].toLowerCase();
+  const last  = empName.split(/\s+/).slice(-1)[0].toLowerCase();
+  const title = (ev.title || '').toLowerCase();
+  const calName = (ev.calendarName || '').toLowerCase();
+  // Match if the calendar name is mine, or the event title contains my name
+  if (calName === empName.toLowerCase()) return true;
+  if (title.includes(first) || title.includes(last)) return true;
+  return false;
+}
 
-  container.innerHTML = dates.map(date => {
-    const key      = date.toISOString().split('T')[0];
-    const isToday  = date.getTime() === today.getTime();
-    const dayName  = DAY_NAMES[date.getDay()];
-    const dayFmt   = date.toLocaleDateString('en-US', { month:'short', day:'numeric' });
-    const shifts   = (scheduleData[key] || []);
-    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+function renderSchedEvents() {
+  const container = document.getElementById('schedEvents');
+  const label     = document.getElementById('schedDayLabel');
+  if (!container || !schedSelectedDate) return;
 
-    const shiftsHtml = shifts.length
-      ? shifts.map((s, i) => {
-          const initials = s.emp.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-          return `<div class="sched-shift">
-            <div class="sched-shift-avatar">${initials}</div>
-            <div class="sched-shift-body">
-              <div class="sched-shift-name">${s.emp}</div>
-              <div class="sched-shift-detail">${s.start}–${s.end} · ${s.job}</div>
-              ${s.notes ? `<div class="sched-shift-detail" style="color:var(--text-soft);">${s.notes}</div>` : ''}
-            </div>
-            <button class="sched-shift-del" onclick="deleteShift('${key}',${i})">×</button>
-          </div>`;
-        }).join('')
-      : `<div class="sched-empty">${isWeekend ? 'Weekend' : 'No shifts scheduled'}</div>`;
+  const d = new Date(schedSelectedDate + 'T12:00');
+  const todayYmd = ymdString(new Date());
+  let labelText;
+  if (schedSelectedDate === todayYmd) labelText = 'Today, ' + d.toLocaleDateString('en-US', { month:'long', day:'numeric' });
+  else labelText = d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+  label.textContent = labelText;
 
-    return `<div class="sched-day ${isToday ? 'today' : ''}">
-      <div class="sched-day-hdr">
-        <div>
-          <div class="sched-day-name">${dayName} ${isToday ? '· Today' : ''}</div>
-          <div class="sched-day-date">${dayFmt}</div>
-        </div>
-        <button class="sched-add-btn" onclick="openShiftModal('${key}')">+ Add</button>
+  let events = schedEventsByDate[schedSelectedDate] || [];
+  if (schedFilterMine) events = events.filter(eventBelongsToMe);
+
+  if (!events.length) {
+    container.innerHTML = `<div class="sched-empty">${schedFilterMine ? 'No events for you this day.' : 'No events scheduled.'}</div>`;
+    return;
+  }
+
+  // Sort: all-day first, then by start time
+  events.sort((a, b) => {
+    if (a.isAllDay !== b.isAllDay) return a.isAllDay ? -1 : 1;
+    return a.start - b.start;
+  });
+
+  container.innerHTML = events.map(ev => {
+    const evStart = new Date(ev.start);
+    const evEnd   = new Date(ev.end);
+    const timeStr = ev.isAllDay
+      ? 'All day'
+      : evStart.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' })
+        + ' – '
+        + evEnd.toLocaleTimeString('en-US',  { hour:'numeric', minute:'2-digit' });
+    const color = ev.calendarColor || '#4fa3e0';
+    const loc = ev.location ? `<div class="sched-event-loc">📍 ${escHtml(ev.location)}</div>` : '';
+    return `<div class="sched-event-card" style="border-left-color:${color};">
+      <div class="sched-event-title">${escHtml(ev.title)}</div>
+      <div class="sched-event-meta">
+        <span class="sched-event-time">${timeStr}</span>
+        <span class="sched-event-cal" style="color:${color};">${escHtml(ev.calendarName)}</span>
       </div>
-      ${shiftsHtml}
+      ${loc}
     </div>`;
   }).join('');
+}
+
+function toggleSchedFilter() {
+  schedFilterMine = !schedFilterMine;
+  const btn = document.getElementById('schedFilterBtn');
+  btn.textContent = schedFilterMine ? 'Just me' : 'All';
+  btn.classList.toggle('active', schedFilterMine);
+  renderSchedEvents();
+}
+
+// Called from Settings when calendar selection changes
+function onSchedCalendarsChanged(newIds) {
+  schedSelectedCalendarIds = newIds.slice();
+  localStorage.setItem('pph_sched_cals', JSON.stringify(schedSelectedCalendarIds));
+  // Reset and reload if Schedule tab is currently visible
+  if (document.getElementById('view-schedule') && document.getElementById('view-schedule').classList.contains('active')) {
+    initSchedule();
+  }
+}
+
+// Load the list of available calendars (from Apps Script) and render checkboxes
+async function loadCalendarSources() {
+  const container = document.getElementById('calSourcesList');
+  if (!container) return;
+  if (!sheetUrl) {
+    container.innerHTML = '<div class="cal-sources-loading">Connect to your spreadsheet first (URL above).</div>';
+    return;
+  }
+  container.innerHTML = '<div class="cal-sources-loading">Loading calendars…</div>';
+  try {
+    const res = await fetch(sheetUrl + '?action=listCalendars');
+    const data = await res.json();
+    if (data.error) {
+      container.innerHTML = '<div class="sched-error">' + escHtml(data.error) + '</div>';
+      return;
+    }
+    const cals = data.calendars || [];
+    if (!cals.length) {
+      container.innerHTML = '<div class="cal-sources-loading">No calendars found.</div>';
+      return;
+    }
+    container.innerHTML = cals.map(cal => {
+      const checked = schedSelectedCalendarIds.indexOf(cal.id) !== -1;
+      const tag = cal.isOwned ? 'OWNED' : 'SHARED';
+      return `<label class="cal-source-row">
+        <input type="checkbox" data-cal-id="${escAttr(cal.id)}" ${checked ? 'checked' : ''} onchange="onCalSourceToggle(this)">
+        <div class="cal-source-swatch" style="background:${escAttr(cal.color || '#4fa3e0')};"></div>
+        <div class="cal-source-name">${escHtml(cal.name)}</div>
+        <div class="cal-source-tag">${tag}</div>
+      </label>`;
+    }).join('');
+  } catch (e) {
+    container.innerHTML = '<div class="sched-error">Could not load: ' + escHtml(e.message || 'unknown') + '</div>';
+  }
+}
+
+function onCalSourceToggle(input) {
+  const id = input.getAttribute('data-cal-id');
+  const checked = input.checked;
+  let ids = schedSelectedCalendarIds.slice();
+  if (checked && ids.indexOf(id) === -1) ids.push(id);
+  if (!checked) ids = ids.filter(x => x !== id);
+  onSchedCalendarsChanged(ids);
 }
 
 // ─── SUBMIT ──────────────────────────────────────────────────────────
