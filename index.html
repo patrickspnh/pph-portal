@@ -427,9 +427,14 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 .scan-stage { flex:1; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; padding:12px; }
 .scan-stage canvas { max-width:100%; max-height:100%; display:block; }
 .scan-corners-svg { position:absolute; inset:0; pointer-events:none; }
-#scanPolygon { fill:rgba(79,163,224,0.12); stroke:var(--accent); stroke-width:2; }
-.scan-handle { fill:var(--accent); stroke:#fff; stroke-width:2.5; cursor:grab; pointer-events:auto; touch-action:none; }
-.scan-handle:active { cursor:grabbing; }
+#scanPolygon { fill:rgba(79,163,224,0.12); stroke:var(--accent); stroke-width:2; pointer-events:none; }
+/* Invisible hit area — large for easy finger tapping */
+.scan-handle-hit { fill:rgba(0,0,0,0.001); stroke:none; pointer-events:auto; cursor:grab; touch-action:none; }
+.scan-handle-hit:active { cursor:grabbing; }
+/* Visible handle — smaller for a clean look. pointer-events:none so the hit-area
+   underneath catches the press (otherwise small visible circle would steal the event). */
+.scan-handle { fill:var(--accent); stroke:#fff; stroke-width:2.5; pointer-events:none; transition:r 0.1s, filter 0.1s; }
+.scan-handle.dragging { fill:#fff; stroke:var(--accent); filter:drop-shadow(0 0 8px rgba(79,163,224,0.6)); }
 .scan-instructions { padding:12px 16px calc(12px + env(safe-area-inset-bottom)); background:var(--navy-deep); color:var(--muted); font-size:12px; text-align:center; border-top:1px solid var(--border-soft); }
 
 /* ── DAY VIEW ── */
@@ -1081,10 +1086,16 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
     <canvas id="scanCanvas"></canvas>
     <svg id="scanCorners" class="scan-corners-svg">
       <polygon id="scanPolygon" />
-      <circle class="scan-handle" data-idx="0" r="14" />
-      <circle class="scan-handle" data-idx="1" r="14" />
-      <circle class="scan-handle" data-idx="2" r="14" />
-      <circle class="scan-handle" data-idx="3" r="14" />
+      <!-- Invisible hit-area circles (large) sit behind the visible handles for easier touch -->
+      <circle class="scan-handle-hit" data-idx="0" r="28" />
+      <circle class="scan-handle-hit" data-idx="1" r="28" />
+      <circle class="scan-handle-hit" data-idx="2" r="28" />
+      <circle class="scan-handle-hit" data-idx="3" r="28" />
+      <!-- Visible handles (small) -->
+      <circle class="scan-handle" data-idx="0" r="12" />
+      <circle class="scan-handle" data-idx="1" r="12" />
+      <circle class="scan-handle" data-idx="2" r="12" />
+      <circle class="scan-handle" data-idx="3" r="12" />
     </svg>
   </div>
   <div class="scan-instructions">
@@ -2510,17 +2521,19 @@ function drawScanOverlay() {
   poly.setAttribute('points',
     corners.map(c => c.x + ',' + c.y).join(' ')
   );
-  const handles = document.querySelectorAll('.scan-handle');
-  handles.forEach((h, i) => {
-    h.setAttribute('cx', corners[i].x);
-    h.setAttribute('cy', corners[i].y);
+  // Move both the visible handle AND its invisible hit-area together
+  const allCircles = document.querySelectorAll('.scan-handle, .scan-handle-hit');
+  allCircles.forEach(h => {
+    const idx = parseInt(h.getAttribute('data-idx'), 10);
+    h.setAttribute('cx', corners[idx].x);
+    h.setAttribute('cy', corners[idx].y);
   });
 }
 
 function attachScanHandleListeners() {
-  const handles = document.querySelectorAll('.scan-handle');
-  handles.forEach(h => {
-    // Use pointer events so we get mouse + touch + pen, all in one
+  // Bind to the larger invisible hit-area circles, not the small visible ones
+  const hits = document.querySelectorAll('.scan-handle-hit');
+  hits.forEach(h => {
     h.onpointerdown = startCornerDrag;
   });
 }
@@ -2534,11 +2547,21 @@ function startCornerDrag(e) {
   const dispW  = scanState.dispW;
   const dispH  = scanState.dispH;
 
+  // Highlight the active handle so it's visible above the finger
+  const visibleHandle = document.querySelector('.scan-handle[data-idx="' + idx + '"]');
+  if (visibleHandle) {
+    visibleHandle.classList.add('dragging');
+    visibleHandle.setAttribute('r', '14'); // grow slightly while dragging
+  }
+
+  // Capture the pointer so we keep getting events even if the finger drifts
+  // off the original hit circle.
+  try { e.target.setPointerCapture(e.pointerId); } catch(_) {}
+
   function move(ev) {
     ev.preventDefault();
     const xPx = (ev.clientX - rect.left);
     const yPx = (ev.clientY - rect.top);
-    // Convert from screen pixels to canvas/SVG coords (they're the same since viewBox matches)
     const x = Math.max(0, Math.min(dispW, xPx * (dispW / rect.width)));
     const y = Math.max(0, Math.min(dispH, yPx * (dispH / rect.height)));
     scanState.corners[idx] = { x, y };
@@ -2549,6 +2572,10 @@ function startCornerDrag(e) {
     document.removeEventListener('pointermove', move);
     document.removeEventListener('pointerup', end);
     document.removeEventListener('pointercancel', end);
+    if (visibleHandle) {
+      visibleHandle.classList.remove('dragging');
+      visibleHandle.setAttribute('r', '12');
+    }
   }
 
   document.addEventListener('pointermove', move, { passive: false });
