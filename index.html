@@ -1778,23 +1778,43 @@ async function onAttachmentChosen(event, kind) {
 
   try {
     const base64 = await fileToBase64(file);
-    // Use default cors mode (NOT no-cors) so we can read the response with the
-    // Drive URL. Content-Type 'text/plain' avoids the CORS preflight that
-    // would otherwise reject Apps Script. Apps Script reads e.postData.contents
-    // regardless of declared content-type.
-    const res = await fetch(sheetUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'uploadChatAttachment',
-        fileName: file.name,
-        mimeType: file.type,
-        data: base64
-      })
-    });
-    const result = await res.json();
+    let res;
+    try {
+      res = await fetch(sheetUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'uploadChatAttachment',
+          fileName: file.name,
+          mimeType: file.type,
+          data: base64
+        })
+      });
+    } catch (netErr) {
+      // Network-layer failure (CORS rejection, connection drop, etc.)
+      throw new Error('Network: ' + (netErr.message || 'fetch failed'));
+    }
+    if (!res.ok) {
+      // HTTP-level failure: try to read body for diagnostics
+      let body = '';
+      try { body = await res.text(); } catch (_) {}
+      throw new Error('HTTP ' + res.status + (body ? ' — ' + body.substring(0, 200) : ''));
+    }
+    let result;
+    try {
+      result = await res.json();
+    } catch (parseErr) {
+      // Server returned non-JSON — most likely the default response because the
+      // new action isn't deployed. Read it as text to surface what came back.
+      let body = '';
+      try { body = await res.clone().text(); } catch (_) {}
+      throw new Error('Server returned non-JSON: ' + body.substring(0, 200));
+    }
     if (!result || !result.url) {
-      throw new Error(result && result.error ? result.error : 'Upload returned no URL');
+      if (result && result.error) {
+        throw new Error('Server error: ' + result.error);
+      }
+      throw new Error('No URL returned — is the Apps Script redeployed? Got: ' + JSON.stringify(result).substring(0, 200));
     }
     pendingAttachment = {
       url:  result.url,
