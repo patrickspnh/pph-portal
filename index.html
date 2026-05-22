@@ -1402,6 +1402,11 @@ let activeChatName    = '';     // display name for header
 let activeChatMembers = null;   // for groups: array of names; null otherwise
 let chatMessages      = [];
 let chatPollTimer     = null;
+// Track what's currently rendered so we can skip identical re-renders
+// (fixes the blinking that polling caused).
+let lastRenderedFingerprint = '';
+// Track in-flight outgoing messages so we can show "pending"/"failed" state.
+let pendingSends = {};   // ts -> { msg, state, text, attachment, attempts, lastTried }
 let groupModalMode    = 'create'; // 'create' | 'edit'
 let groupModalEditingId = null;
 
@@ -1715,10 +1720,7 @@ function backToChatsList() {
 // Track what's currently rendered so we can skip identical re-renders (fixes
 // the blinking that polling caused — re-setting innerHTML 12 times a minute
 // even when nothing changed).
-let lastRenderedFingerprint = '';
-// Track in-flight outgoing messages so we can show a "pending"/"failed" state
-// when no-cors POSTs vanish. Keyed by client timestamp.
-let pendingSends = {};   // ts -> { text, attempts, lastTried }
+// (Declarations moved to the top-level state block above.)
 
 function messagesFingerprint(msgs) {
   // Cheap, stable hash: count + last-message ts + last-message text length
