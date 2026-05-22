@@ -67,7 +67,9 @@ header { position: relative; z-index: 10; padding: 48px 24px 8px; display: flex;
 .nav-badge { position: absolute; top: 6px; right: calc(50% - 18px); background: var(--danger); color: white; border-radius: 100px; font-size: 9px; font-weight: 800; padding: 1px 5px; min-width: 16px; text-align: center; }
 
 main { flex: 1; padding: 0 16px 80px; position: relative; z-index: 10; overflow-y: auto; }
-#view-messages { padding-bottom: 0; }
+/* messages view: restore the 80px bottom padding so the input/menu clear the
+   fixed bottom nav, plus a little extra for the iPhone safe-area inset. */
+#view-messages { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
 .view { display: none; }
 .view.active { display: block; animation: fadeUp 0.3s ease both; }
 @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
@@ -245,7 +247,7 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
   /* No fixed height: messages take only as much vertical space as they need,
      and the input sits directly below them. A max-height prevents long
      conversations from running off-screen — overflow scrolls within the list. */
-  max-height:calc(100dvh - 260px);
+  max-height:calc(100dvh - 320px);
   min-height:60px;
   overflow-y:auto;
   display:flex;
@@ -1772,20 +1774,64 @@ function showPendingAttachment(name, kind, uploading) {
   }
 }
 
+// Compress an image file by drawing it to a canvas at a max dimension and
+// re-encoding as JPEG. Returns a Promise<Blob>. Photos from phone cameras can
+// easily be 5MB+; this cuts them to a few hundred KB without visible loss.
+function compressImage(file, maxDim, quality) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = function() {
+      URL.revokeObjectURL(url);
+      let w = img.width, h = img.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+        else       { w = Math.round(w * maxDim / h); h = maxDim; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      canvas.toBlob(
+        blob => blob ? resolve(blob) : reject(new Error('toBlob returned null')),
+        'image/jpeg',
+        quality
+      );
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image load failed')); };
+    img.src = url;
+  });
+}
+
 async function onAttachmentChosen(event, kind) {
-  const file = event.target.files && event.target.files[0];
-  if (!file) return;
+  const original = event.target.files && event.target.files[0];
+  if (!original) return;
   if (!sheetUrl) { toast('Not connected', 'err'); return; }
 
-  // 5MB cap to avoid choking Apps Script / base64 inflation
+  showPendingAttachment(original.name, kind, true);
+
+  let file = original;
+  // Compress images aggressively before upload. Skip compression for non-images
+  // (PDFs, docs, etc) — those are uploaded as-is.
+  try {
+    if (kind === 'image' && original.type && original.type.indexOf('image/') === 0) {
+      const blob = await compressImage(original, 1600, 0.82);
+      // Re-wrap as a File so .name is preserved (some browsers care)
+      file = new File([blob], original.name.replace(/\.(heic|heif|png|webp)$/i, '.jpg'), { type: 'image/jpeg' });
+    }
+  } catch (compErr) {
+    console.log('Image compression failed, falling back to original:', compErr);
+    // Continue with the original file
+  }
+
+  // 5MB cap after compression — non-images that exceed this are rejected
   const MAX_BYTES = 5 * 1024 * 1024;
   if (file.size > MAX_BYTES) {
-    toast('File too large (max 5 MB)', 'err');
+    toast('File too large (max 5 MB after compression)', 'err');
+    clearPendingAttachment();
     event.target.value = '';
     return;
   }
-
-  showPendingAttachment(file.name, kind, true);
 
   try {
     const base64 = await fileToBase64(file);
@@ -1793,7 +1839,9 @@ async function onAttachmentChosen(event, kind) {
     try {
       res = await fetch(sheetUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        // text/plain avoids the CORS preflight that application/json would trigger.
+        // Apps Script reads the raw body via e.postData.contents either way.
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
           action: 'uploadChatAttachment',
           fileName: file.name,
@@ -2166,7 +2214,9 @@ async function confirmReceiptUpload() {
 
     const res  = await fetch(sheetUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      // text/plain avoids the CORS preflight that application/json would trigger.
+      // Apps Script reads the raw body via e.postData.contents either way.
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({
         action:   'uploadReceipt',
         job:      activeJobFile,
