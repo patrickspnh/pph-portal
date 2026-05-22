@@ -281,7 +281,20 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 .chat-send-btn:hover { filter:brightness(1.1); }
 
 /* Attach menu — small popover above input */
-.attach-menu { display:flex; gap:8px; padding:8px; margin-top:4px; background:var(--navy-mid); border:1px solid var(--border-soft); border-radius:12px; }
+/* Attach menu — pops UP above the input wrap (so it stays visible above the
+   keyboard / nav). Anchored relative to #conversationScreen which has position:relative. */
+.attach-menu {
+  position:absolute;
+  bottom:80px;    /* clears the input + nav */
+  left:0; right:0;
+  display:flex; gap:8px;
+  padding:8px;
+  background:var(--navy-mid);
+  border:1px solid var(--border-soft);
+  border-radius:12px;
+  box-shadow:0 -4px 16px rgba(0,0,0,0.4);
+  z-index:50;
+}
 .attach-menu.hidden { display:none; }
 .attach-menu-item { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 6px; background:var(--navy-deep); border:1px solid var(--border-soft); border-radius:10px; cursor:pointer; color:var(--text); font-size:12px; font-weight:600; transition:all 0.15s; }
 .attach-menu-item:hover { border-color:var(--accent); background:rgba(79,163,224,0.08); }
@@ -395,6 +408,22 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 .group-modal-cancel { background:none; border:1px solid var(--border-soft); color:var(--muted); }
 .group-modal-save { background:var(--accent); color:var(--navy-deep); }
 .group-modal-save:disabled { opacity:0.4; cursor:not-allowed; }
+
+/* ── SCAN EDITOR ── full-screen overlay with draggable corner handles ── */
+.scan-editor { position:fixed; inset:0; background:#0a1326; z-index:200; display:flex; flex-direction:column; }
+.scan-editor.hidden { display:none; }
+.scan-editor-header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:var(--navy-deep); border-bottom:1px solid var(--border-soft); padding-top:calc(14px + env(safe-area-inset-top)); }
+.scan-title { font-size:15px; font-weight:700; color:var(--text); }
+.scan-cancel-btn { background:none; border:none; color:var(--muted); font-size:14px; font-weight:600; cursor:pointer; padding:6px 10px; }
+.scan-apply-btn { background:var(--accent); border:none; color:var(--navy-deep); font-size:14px; font-weight:700; cursor:pointer; padding:8px 16px; border-radius:8px; }
+.scan-apply-btn:disabled { opacity:0.4; cursor:not-allowed; }
+.scan-stage { flex:1; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; padding:12px; }
+.scan-stage canvas { max-width:100%; max-height:100%; display:block; }
+.scan-corners-svg { position:absolute; inset:0; pointer-events:none; }
+#scanPolygon { fill:rgba(79,163,224,0.12); stroke:var(--accent); stroke-width:2; }
+.scan-handle { fill:var(--accent); stroke:#fff; stroke-width:2.5; cursor:grab; pointer-events:auto; touch-action:none; }
+.scan-handle:active { cursor:grabbing; }
+.scan-instructions { padding:12px 16px calc(12px + env(safe-area-inset-bottom)); background:var(--navy-deep); color:var(--muted); font-size:12px; text-align:center; border-top:1px solid var(--border-soft); }
 
 /* ── DAY VIEW ── */
 .day-view { display:flex; flex-direction:column; }
@@ -769,7 +798,7 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
       </div>
 
       <!-- SCREEN B: Open conversation -->
-      <div id="conversationScreen" style="display:none;">
+      <div id="conversationScreen" style="display:none;position:relative;">
         <div class="conv-header">
           <button class="conv-back" onclick="backToChatsList()" aria-label="Back">‹</button>
           <div class="conv-title-wrap">
@@ -964,12 +993,18 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
           <div class="card">
             <div class="card-title">📸 Attach Receipt</div>
             <div style="margin-bottom:12px;font-size:13px;color:var(--text-soft);line-height:1.6;">
-              Take a photo of a receipt or choose from your camera roll. It will be saved to Google Drive and linked to this job.
+              Take a photo of a receipt or scan it for a cleaner result. Files are saved to Google Drive and linked to this job.
             </div>
-            <label for="receiptInput" class="btn-submit" style="display:block;text-align:center;cursor:pointer;margin-bottom:8px;">
-              📷 Take / Choose Photo
-            </label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+              <label for="receiptInput" class="btn-submit" style="display:flex;align-items:center;justify-content:center;cursor:pointer;margin:0;padding:12px 8px;font-size:13px;">
+                📷 Photo
+              </label>
+              <label for="scanInput" class="btn-submit" style="display:flex;align-items:center;justify-content:center;cursor:pointer;margin:0;padding:12px 8px;font-size:13px;background:var(--accent);color:var(--navy-deep);">
+                📐 Scan
+              </label>
+            </div>
             <input type="file" id="receiptInput" accept="image/*" capture="environment" style="display:none;" onchange="uploadReceipt(this)">
+            <input type="file" id="scanInput" accept="image/*" capture="environment" style="display:none;" onchange="onScanCaptured(event)">
             <div id="receiptPreview" style="display:none;margin-top:10px;">
               <img id="receiptImg" style="width:100%;border-radius:10px;border:1px solid var(--border-soft);">
               <button onclick="confirmReceiptUpload()" class="btn-submit" style="margin-top:8px;">✓ Upload This Receipt</button>
@@ -1024,6 +1059,28 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- ═══ SCAN EDITOR ═══ Full-screen overlay for cropping/processing a receipt -->
+<div id="scanEditor" class="scan-editor hidden">
+  <div class="scan-editor-header">
+    <button class="scan-cancel-btn" onclick="cancelScan()">Cancel</button>
+    <div class="scan-title">Adjust corners</div>
+    <button class="scan-apply-btn" id="scanApplyBtn" onclick="applyScan()">Apply</button>
+  </div>
+  <div class="scan-stage" id="scanStage">
+    <canvas id="scanCanvas"></canvas>
+    <svg id="scanCorners" class="scan-corners-svg">
+      <polygon id="scanPolygon" />
+      <circle class="scan-handle" data-idx="0" r="14" />
+      <circle class="scan-handle" data-idx="1" r="14" />
+      <circle class="scan-handle" data-idx="2" r="14" />
+      <circle class="scan-handle" data-idx="3" r="14" />
+    </svg>
+  </div>
+  <div class="scan-instructions">
+    Drag each corner to the edges of the receipt, then tap <b>Apply</b>.
+  </div>
+</div>
 
 <script>
 // ─── DEBUG: surface errors on screen so silent failures aren't silent ────
@@ -2220,6 +2277,391 @@ function uploadReceipt(input) {
     document.getElementById('receiptPreview').style.display = 'block';
   };
   reader.readAsDataURL(file);
+}
+
+// ─────────────────────────────────────────────────────────────
+// SCAN EDITOR — manual corner adjustment + perspective correction + B&W
+// ─────────────────────────────────────────────────────────────
+let scanState = null; // { img, canvas, ctx, corners: [{x,y}*4], displayScale }
+
+function onScanCaptured(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = function() {
+    URL.revokeObjectURL(url);
+    openScanEditor(img);
+  };
+  img.onerror = function() {
+    URL.revokeObjectURL(url);
+    toast('Could not load image', 'err');
+  };
+  img.src = url;
+  // Reset so re-picking same file fires onchange again
+  event.target.value = '';
+}
+
+function openScanEditor(img) {
+  const editor  = document.getElementById('scanEditor');
+  const stage   = document.getElementById('scanStage');
+  const canvas  = document.getElementById('scanCanvas');
+  const svg     = document.getElementById('scanCorners');
+
+  editor.classList.remove('hidden');
+
+  // Compute display dimensions to fit the stage while preserving aspect ratio.
+  // We use requestAnimationFrame to ensure layout has settled before measuring.
+  requestAnimationFrame(() => {
+    const stageRect = stage.getBoundingClientRect();
+    const maxW = stageRect.width  - 24;
+    const maxH = stageRect.height - 24;
+    const imgRatio = img.width / img.height;
+    let dispW, dispH;
+    if (maxW / imgRatio <= maxH) {
+      dispW = maxW; dispH = maxW / imgRatio;
+    } else {
+      dispH = maxH; dispW = maxH * imgRatio;
+    }
+    canvas.width  = dispW;
+    canvas.height = dispH;
+    canvas.style.width  = dispW + 'px';
+    canvas.style.height = dispH + 'px';
+
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, dispW, dispH);
+
+    // Position the SVG overlay to match the canvas exactly
+    const canvasRect = canvas.getBoundingClientRect();
+    const stageRect2 = stage.getBoundingClientRect();
+    const offsetX = canvasRect.left - stageRect2.left;
+    const offsetY = canvasRect.top  - stageRect2.top;
+    svg.setAttribute('viewBox', '0 0 ' + dispW + ' ' + dispH);
+    svg.style.left   = offsetX + 'px';
+    svg.style.top    = offsetY + 'px';
+    svg.style.width  = dispW + 'px';
+    svg.style.height = dispH + 'px';
+    svg.style.position = 'absolute';
+
+    // Initial corners: ~8% inset from edges, so user can grab them easily.
+    const inset = 0.08;
+    const corners = [
+      { x: dispW * inset,        y: dispH * inset        }, // top-left
+      { x: dispW * (1 - inset),  y: dispH * inset        }, // top-right
+      { x: dispW * (1 - inset),  y: dispH * (1 - inset)  }, // bottom-right
+      { x: dispW * inset,        y: dispH * (1 - inset)  }, // bottom-left
+    ];
+
+    scanState = {
+      img,
+      canvas,
+      ctx,
+      corners,
+      dispW, dispH,
+      scaleToOriginal: img.width / dispW,
+    };
+
+    drawScanOverlay();
+    attachScanHandleListeners();
+  });
+}
+
+function drawScanOverlay() {
+  if (!scanState) return;
+  const { corners } = scanState;
+  const poly = document.getElementById('scanPolygon');
+  poly.setAttribute('points',
+    corners.map(c => c.x + ',' + c.y).join(' ')
+  );
+  const handles = document.querySelectorAll('.scan-handle');
+  handles.forEach((h, i) => {
+    h.setAttribute('cx', corners[i].x);
+    h.setAttribute('cy', corners[i].y);
+  });
+}
+
+function attachScanHandleListeners() {
+  const handles = document.querySelectorAll('.scan-handle');
+  handles.forEach(h => {
+    // Use pointer events so we get mouse + touch + pen, all in one
+    h.onpointerdown = startCornerDrag;
+  });
+}
+
+function startCornerDrag(e) {
+  e.preventDefault();
+  if (!scanState) return;
+  const idx    = parseInt(e.target.getAttribute('data-idx'), 10);
+  const svg    = document.getElementById('scanCorners');
+  const rect   = svg.getBoundingClientRect();
+  const dispW  = scanState.dispW;
+  const dispH  = scanState.dispH;
+
+  function move(ev) {
+    ev.preventDefault();
+    const xPx = (ev.clientX - rect.left);
+    const yPx = (ev.clientY - rect.top);
+    // Convert from screen pixels to canvas/SVG coords (they're the same since viewBox matches)
+    const x = Math.max(0, Math.min(dispW, xPx * (dispW / rect.width)));
+    const y = Math.max(0, Math.min(dispH, yPx * (dispH / rect.height)));
+    scanState.corners[idx] = { x, y };
+    drawScanOverlay();
+  }
+
+  function end() {
+    document.removeEventListener('pointermove', move);
+    document.removeEventListener('pointerup', end);
+    document.removeEventListener('pointercancel', end);
+  }
+
+  document.addEventListener('pointermove', move, { passive: false });
+  document.addEventListener('pointerup',   end);
+  document.addEventListener('pointercancel', end);
+}
+
+function cancelScan() {
+  document.getElementById('scanEditor').classList.add('hidden');
+  scanState = null;
+}
+
+function applyScan() {
+  if (!scanState) return;
+  const btn = document.getElementById('scanApplyBtn');
+  btn.disabled = true;
+  btn.textContent = 'Processing…';
+
+  // Use setTimeout to let the UI update before the heavy synchronous work
+  setTimeout(() => {
+    try {
+      const blob = processScanToBlob();
+      // Hand off to the existing receipt upload flow
+      pendingReceipt = new File([blob], 'scan_' + Date.now() + '.jpg', { type: 'image/jpeg' });
+      const reader = new FileReader();
+      reader.onload = e => {
+        document.getElementById('receiptImg').src = e.target.result;
+        document.getElementById('receiptPreview').style.display = 'block';
+      };
+      reader.readAsDataURL(blob);
+
+      cancelScan();
+      btn.disabled = false;
+      btn.textContent = 'Apply';
+    } catch (e) {
+      console.log('Scan processing error:', e);
+      toast('Scan failed: ' + e.message, 'err');
+      btn.disabled = false;
+      btn.textContent = 'Apply';
+    }
+  }, 50);
+}
+
+// Process the scan: perspective-correct the quadrilateral defined by corners
+// in display-space, sample from the original image, and apply B&W enhancement.
+// Returns a Blob.
+function processScanToBlob() {
+  const { img, corners, scaleToOriginal } = scanState;
+
+  // Map display-space corners back to original-image coordinates
+  const src = corners.map(c => ({
+    x: c.x * scaleToOriginal,
+    y: c.y * scaleToOriginal,
+  }));
+
+  // Compute output dimensions from the longest edges of the quadrilateral.
+  // (TL=0, TR=1, BR=2, BL=3)
+  const widthTop    = dist(src[0], src[1]);
+  const widthBot    = dist(src[3], src[2]);
+  const heightLeft  = dist(src[0], src[3]);
+  const heightRight = dist(src[1], src[2]);
+  let outW = Math.round(Math.max(widthTop, widthBot));
+  let outH = Math.round(Math.max(heightLeft, heightRight));
+  // Cap output size to keep file size and processing time reasonable.
+  const MAX_DIM = 1400;
+  if (outW > MAX_DIM || outH > MAX_DIM) {
+    const s = MAX_DIM / Math.max(outW, outH);
+    outW = Math.round(outW * s);
+    outH = Math.round(outH * s);
+  }
+
+  // Compute the homography matrix from destination rectangle to source quadrilateral.
+  // (We compute dst -> src so that for each pixel in the output, we can look up
+  // the corresponding pixel in the original image.)
+  const dst = [
+    { x: 0,    y: 0    },
+    { x: outW, y: 0    },
+    { x: outW, y: outH },
+    { x: 0,    y: outH },
+  ];
+  const H = computeHomography(dst, src);
+  if (!H) throw new Error('Bad quadrilateral');
+
+  // Render the source image to an offscreen canvas at full resolution so
+  // we can read pixel data from it.
+  const srcCanvas = document.createElement('canvas');
+  srcCanvas.width  = img.width;
+  srcCanvas.height = img.height;
+  const srcCtx = srcCanvas.getContext('2d');
+  srcCtx.drawImage(img, 0, 0);
+  const srcImageData = srcCtx.getImageData(0, 0, img.width, img.height);
+  const srcData = srcImageData.data;
+
+  // Build the output image data
+  const outCanvas = document.createElement('canvas');
+  outCanvas.width  = outW;
+  outCanvas.height = outH;
+  const outCtx = outCanvas.getContext('2d');
+  const outImageData = outCtx.createImageData(outW, outH);
+  const outData = outImageData.data;
+
+  // First pass: warp + grayscale, into a temp Float32Array for adaptive threshold
+  const gray = new Float32Array(outW * outH);
+  for (let y = 0; y < outH; y++) {
+    for (let x = 0; x < outW; x++) {
+      // Apply homography: [sx, sy, sw]^T = H * [x, y, 1]^T
+      const denom = H[6]*x + H[7]*y + H[8];
+      const sx    = (H[0]*x + H[1]*y + H[2]) / denom;
+      const sy    = (H[3]*x + H[4]*y + H[5]) / denom;
+      // Nearest-neighbor sample (bilinear would be smoother but ~2x slower)
+      const sxi = Math.round(sx);
+      const syi = Math.round(sy);
+      if (sxi < 0 || sxi >= img.width || syi < 0 || syi >= img.height) {
+        gray[y * outW + x] = 255; // off-image: treat as white
+        continue;
+      }
+      const srcIdx = (syi * img.width + sxi) * 4;
+      // Luminance: 0.299 R + 0.587 G + 0.114 B
+      const lum = 0.299 * srcData[srcIdx] + 0.587 * srcData[srcIdx+1] + 0.114 * srcData[srcIdx+2];
+      gray[y * outW + x] = lum;
+    }
+  }
+
+  // Adaptive threshold: for each pixel, compare against local mean within a window.
+  // We use a box-blur shortcut: compute a mean image, then threshold.
+  const blurred = boxBlur(gray, outW, outH, 15); // 15px radius works well for receipts
+  const C = 10; // offset — pixel must be this much darker than local mean to count as ink
+  for (let i = 0; i < gray.length; i++) {
+    const isInk = gray[i] < blurred[i] - C;
+    const v = isInk ? 0 : 255;
+    const o = i * 4;
+    outData[o]   = v;
+    outData[o+1] = v;
+    outData[o+2] = v;
+    outData[o+3] = 255;
+  }
+
+  outCtx.putImageData(outImageData, 0, 0);
+
+  // Convert to JPEG blob synchronously via toDataURL → fetch, since canvas.toBlob is async
+  // Actually we'll use a sync-wrapped approach: return a promise-resolved Blob via the
+  // dataURL route, but since this is called from a sync function, use toDataURL.
+  const dataUrl = outCanvas.toDataURL('image/jpeg', 0.88);
+  return dataURLToBlob(dataUrl);
+}
+
+function dist(a, b) { const dx = a.x - b.x, dy = a.y - b.y; return Math.sqrt(dx*dx + dy*dy); }
+
+function dataURLToBlob(dataUrl) {
+  const parts = dataUrl.split(',');
+  const mime  = parts[0].match(/:(.*?);/)[1];
+  const bin   = atob(parts[1]);
+  const arr   = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+
+// Compute the 3x3 homography matrix that maps src points to dst points.
+// Returns a flat 9-element array (row-major), or null if singular.
+// Standard DLT (Direct Linear Transform) approach.
+function computeHomography(src, dst) {
+  // Build the 8x9 matrix A such that A * h = 0, where h is the 9 entries of H.
+  const A = [];
+  for (let i = 0; i < 4; i++) {
+    const sx = src[i].x, sy = src[i].y;
+    const dx = dst[i].x, dy = dst[i].y;
+    A.push([-sx, -sy, -1, 0, 0, 0, sx*dx, sy*dx, dx]);
+    A.push([0, 0, 0, -sx, -sy, -1, sx*dy, sy*dy, dy]);
+  }
+  // Solve A*h=0 by setting h[8]=1 and solving 8x8 linear system for h[0..7].
+  // Build the 8x8 system: A8 * x = b, where x = h[0..7], b = -A[:,8].
+  const A8 = [];
+  const b  = [];
+  for (let i = 0; i < 8; i++) {
+    A8.push(A[i].slice(0, 8));
+    b.push(-A[i][8]);
+  }
+  const x = solveLinear8(A8, b);
+  if (!x) return null;
+  return [x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], 1];
+}
+
+// Gaussian elimination with partial pivoting on an 8x8 system.
+function solveLinear8(A, b) {
+  const N = 8;
+  // Copy to avoid mutating caller
+  const M = A.map((row, i) => row.concat([b[i]]));
+  for (let i = 0; i < N; i++) {
+    // Find pivot
+    let maxRow = i;
+    let maxAbs = Math.abs(M[i][i]);
+    for (let k = i + 1; k < N; k++) {
+      if (Math.abs(M[k][i]) > maxAbs) { maxAbs = Math.abs(M[k][i]); maxRow = k; }
+    }
+    if (maxAbs < 1e-10) return null; // singular
+    if (maxRow !== i) [M[i], M[maxRow]] = [M[maxRow], M[i]];
+    // Eliminate
+    for (let k = i + 1; k < N; k++) {
+      const factor = M[k][i] / M[i][i];
+      for (let j = i; j <= N; j++) M[k][j] -= factor * M[i][j];
+    }
+  }
+  // Back-substitution
+  const x = new Array(N);
+  for (let i = N - 1; i >= 0; i--) {
+    let sum = M[i][N];
+    for (let j = i + 1; j < N; j++) sum -= M[i][j] * x[j];
+    x[i] = sum / M[i][i];
+  }
+  return x;
+}
+
+// 2D box blur (separable) — used for adaptive threshold's local mean.
+function boxBlur(data, w, h, radius) {
+  const out = new Float32Array(data.length);
+  const tmp = new Float32Array(data.length);
+  // Horizontal pass
+  for (let y = 0; y < h; y++) {
+    let sum = 0, count = 0;
+    for (let x = -radius; x <= radius; x++) {
+      const xi = Math.max(0, Math.min(w - 1, x));
+      sum += data[y * w + xi]; count++;
+    }
+    tmp[y * w + 0] = sum / count;
+    for (let x = 1; x < w; x++) {
+      const xRem = x - radius - 1;
+      const xAdd = x + radius;
+      if (xRem >= 0) { sum -= data[y * w + xRem]; count--; }
+      if (xAdd < w)  { sum += data[y * w + xAdd]; count++; }
+      tmp[y * w + x] = sum / count;
+    }
+  }
+  // Vertical pass
+  for (let x = 0; x < w; x++) {
+    let sum = 0, count = 0;
+    for (let y = -radius; y <= radius; y++) {
+      const yi = Math.max(0, Math.min(h - 1, y));
+      sum += tmp[yi * w + x]; count++;
+    }
+    out[0 * w + x] = sum / count;
+    for (let y = 1; y < h; y++) {
+      const yRem = y - radius - 1;
+      const yAdd = y + radius;
+      if (yRem >= 0) { sum -= tmp[yRem * w + x]; count--; }
+      if (yAdd < h)  { sum += tmp[yAdd * w + x]; count++; }
+      out[y * w + x] = sum / count;
+    }
+  }
+  return out;
 }
 
 async function confirmReceiptUpload() {
