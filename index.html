@@ -917,6 +917,36 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 <div class="toast" id="toast"></div>
 
 <script>
+// ─── DEBUG: surface errors on screen so silent failures aren't silent ────
+window.addEventListener('error', function(ev) {
+  try {
+    const box = document.getElementById('jsErrorBox') || (function() {
+      const d = document.createElement('div');
+      d.id = 'jsErrorBox';
+      d.style.cssText = 'position:fixed;top:8px;left:8px;right:8px;background:#7f1d1d;color:#fff;padding:10px 12px;border-radius:8px;font:11px monospace;z-index:9999;max-height:40vh;overflow:auto;box-shadow:0 4px 16px rgba(0,0,0,.5);';
+      d.onclick = function() { d.remove(); };
+      document.body.appendChild(d);
+      return d;
+    })();
+    const line = (ev.filename || '?') + ':' + (ev.lineno || '?') + ' — ' + (ev.message || 'error');
+    box.innerHTML += '<div style="margin-bottom:4px;border-bottom:1px solid rgba(255,255,255,.2);padding-bottom:4px;">' + line + '</div>';
+  } catch(_) {}
+});
+window.addEventListener('unhandledrejection', function(ev) {
+  try {
+    const box = document.getElementById('jsErrorBox') || (function() {
+      const d = document.createElement('div');
+      d.id = 'jsErrorBox';
+      d.style.cssText = 'position:fixed;top:8px;left:8px;right:8px;background:#7f1d1d;color:#fff;padding:10px 12px;border-radius:8px;font:11px monospace;z-index:9999;max-height:40vh;overflow:auto;';
+      d.onclick = function() { d.remove(); };
+      document.body.appendChild(d);
+      return d;
+    })();
+    const msg = (ev.reason && (ev.reason.message || ev.reason.toString())) || 'rejection';
+    box.innerHTML += '<div style="margin-bottom:4px;">Promise: ' + msg + '</div>';
+  } catch(_) {}
+});
+
 // ─── ONESIGNAL CONFIG ────────────────────────────────────────────────
 const ONESIGNAL_APP_ID = "6c046269-4791-4a99-9a31-68093320f8f8";
 
@@ -1250,12 +1280,27 @@ function formatLastMessageTime(ts) {
 
 // Called when the Chat tab opens.
 async function initChat() {
-  if (!empName) { toast('Set up your profile first', 'err'); showTab('setup'); return; }
+  // Diagnostic banner — visible so silent failures aren't silent
+  const status = document.getElementById('chatsListStatus');
+  function diag(msg, isErr) {
+    if (!status) return;
+    status.textContent = msg;
+    status.className = 'chats-list-status' + (isErr ? ' err' : '');
+    status.classList.remove('hidden');
+  }
+
+  if (!empName) {
+    diag('No profile set — tap Settings (gear icon) to enter your name.', true);
+    document.getElementById('chatNotReady').style.display = 'none';
+    document.getElementById('chatsListScreen').style.display = 'block';
+    return;
+  }
   document.getElementById('chatNotReady').style.display = 'none';
 
   // Always start on the chats list when the tab is opened fresh
   activeChatChannel = null;
   showChatsListScreen();
+  diag('Loading chats for ' + empName + '…', false);
   await loadChatsList();
   startChatPoll();
 }
@@ -1274,10 +1319,17 @@ function showConversationScreen() {
 // ── Chats list ──────────────────────────────────────────────────────
 async function loadChatsList() {
   const status = document.getElementById('chatsListStatus');
+  function diag(msg, isErr) {
+    if (!status) return;
+    status.textContent = msg;
+    status.className = 'chats-list-status' + (isErr ? ' err' : '');
+    status.classList.remove('hidden');
+  }
+
   if (!sheetUrl) {
     chatsList = [];
     renderChatsList();
-    if (status) { status.textContent = 'Not connected to the spreadsheet. Open Settings to connect.'; status.className = 'chats-list-status err'; }
+    diag('Not connected to spreadsheet. Check Settings.', true);
     return;
   }
   try {
@@ -1285,7 +1337,14 @@ async function loadChatsList() {
     const res  = await fetch(url);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
-    chatsList = (data && data.chats) ? data.chats : [];
+    if (!data || !('chats' in data)) {
+      // Apps Script returned the default response — the new endpoints aren't deployed.
+      chatsList = [];
+      renderChatsList();
+      diag('Server reached but getChatsList not deployed. Re-deploy the Apps Script as a NEW VERSION.', true);
+      return;
+    }
+    chatsList = data.chats || [];
     // Cache my groups so edit modal has member lists handy
     myGroups = chatsList
       .filter(c => c.type === 'group')
@@ -1294,14 +1353,9 @@ async function loadChatsList() {
     if (status) status.classList.add('hidden');
   } catch (e) {
     console.log('Chats list load error:', e);
-    if (status) {
-      status.textContent = 'Could not load chats. Pull to retry or check your connection.';
-      status.className = 'chats-list-status err';
-      status.classList.remove('hidden');
-    }
-    // Still render the roster so the user isn't stuck
     chatsList = [];
     renderChatsList();
+    diag('Load failed: ' + (e && e.message ? e.message : 'unknown error'), true);
   }
 }
 
@@ -1326,7 +1380,7 @@ function renderChatsList() {
     .filter(c => c.type === 'dm')
     .map(c => Object.assign({}, c, { _other: resolveDMOther(c.channelId) }))
     .filter(c => c._other) // drop any orphaned DM channels we can't resolve
-    .sort((a, b) => (b.preview?.ts || 0) - (a.preview?.ts || 0));
+    .sort((a, b) => ((b.preview && b.preview.ts) || 0) - ((a.preview && a.preview.ts) || 0));
 
   const dmedNames = new Set(dmsWithHistory.map(c => c._other));
   const others = CHAT_EMPLOYEES
