@@ -224,9 +224,17 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.
 .btn-save { background: var(--accent); color: var(--navy-deep); font-family: 'Source Sans 3', sans-serif; font-size: 12px; font-weight: 700; padding: 10px 14px; border: none; border-radius: 10px; cursor: pointer; white-space: nowrap; transition: filter 0.2s; }
 .btn-save:hover { filter: brightness(1.1); }
 .jobs-manage { margin-bottom: 6px; }
-.job-list-item { display: flex; align-items: center; justify-content: space-between; background: var(--navy-dark); border: 1px solid var(--border-soft); border-radius: 10px; padding: 10px 12px; margin-bottom: 7px; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text-soft); }
-.del-job { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 17px; line-height: 1; transition: color 0.2s; }
+.job-list-item { display: flex; align-items: center; justify-content: space-between; gap:8px; background: var(--navy-dark); border: 1px solid var(--border-soft); border-radius: 10px; padding: 10px 12px; margin-bottom: 7px; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text-soft); }
+.job-name-text { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.job-row-actions { display:flex; gap:6px; align-items:center; flex-shrink:0; }
+.del-job { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 17px; line-height: 1; transition: color 0.2s; padding:0 4px; }
 .del-job:hover { color: var(--danger); }
+.rename-job { background:none; border:none; color:var(--muted); cursor:pointer; font-size:14px; padding:2px 6px; transition:color 0.2s; }
+.rename-job:hover { color:var(--accent); }
+.job-rename-input { flex:1; min-width:0; padding:7px 10px; background:var(--navy-mid); border:1px solid var(--accent); color:var(--text); border-radius:8px; font-family:'DM Mono',monospace; font-size:12px; outline:none; }
+.rename-save { background:var(--accent); color:var(--navy-deep); border:none; border-radius:6px; padding:5px 10px; font-size:11px; font-weight:700; cursor:pointer; font-family:'Source Sans 3',sans-serif; }
+.rename-cancel { background:none; color:var(--muted); border:1px solid var(--border-soft); border-radius:6px; padding:4px 10px; font-size:11px; font-weight:700; cursor:pointer; font-family:'Source Sans 3',sans-serif; }
+.rename-cancel:hover { color:var(--text); }
 .add-job-row { display: flex; gap: 7px; margin-top: 4px; }
 .add-job-row input { flex: 1; }
 .btn-add-job { background: var(--navy-dark); border: 1px solid rgba(79,163,224,0.5); color: var(--accent); font-family: 'Source Sans 3', sans-serif; font-size: 12px; font-weight: 700; padding: 10px 13px; border-radius: 10px; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
@@ -1389,19 +1397,149 @@ function renderRecentChips() {
 function renderJobManager() {
   const el = document.getElementById('jobListEl');
   if (!el) return;
-  el.innerHTML = jobs.map((j,i) => `<div class="job-list-item"><span>${j}</span><button class="del-job" onclick="removeJob(${i})">×</button></div>`).join('') ||
+  el.innerHTML = jobs.map((j,i) => `<div class="job-list-item" data-job-idx="${i}">
+    <span class="job-name-text" id="jobName_${i}">${escHtml(j)}</span>
+    <div class="job-row-actions">
+      <button class="rename-job" onclick="startRenameJob(${i})" title="Rename">✎</button>
+      <button class="del-job" onclick="removeJob(${i})" title="Delete">×</button>
+    </div>
+  </div>`).join('') ||
     '<div style="color:var(--muted);font-size:13px;padding:6px 0;">No jobs yet.</div>';
 }
+
+// Begin renaming a job — swap the row to show an input + Save/Cancel buttons
+function startRenameJob(i) {
+  const oldName = jobs[i];
+  const row = document.querySelector(`.job-list-item[data-job-idx="${i}"]`);
+  if (!row) return;
+  row.innerHTML = `
+    <input class="job-rename-input" id="renameInput_${i}" value="${escAttr(oldName)}" autocomplete="off" autocapitalize="words">
+    <div class="job-row-actions">
+      <button class="rename-save" onclick="submitRenameJob(${i})">Save</button>
+      <button class="rename-cancel" onclick="renderJobManager()">Cancel</button>
+    </div>`;
+  const input = document.getElementById('renameInput_' + i);
+  input.focus();
+  input.select();
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitRenameJob(i);
+    if (e.key === 'Escape') renderJobManager();
+  });
+}
+
+// Submit the rename — sends to Apps Script, which updates Jobs + Raw Data + returns count
+async function submitRenameJob(i) {
+  const oldName = jobs[i];
+  const input = document.getElementById('renameInput_' + i);
+  if (!input) return;
+  const newName = input.value.trim();
+  if (!newName) { toast('Name cannot be empty', 'err'); return; }
+  if (newName === oldName) { renderJobManager(); return; }
+
+  // Detect if newName already exists in the list — merge case
+  const merging = jobs.some((j, idx) => idx !== i && j.toLowerCase() === newName.toLowerCase());
+
+  // Confirm with the user
+  const confirmMsg = merging
+    ? `'${newName}' already exists.\n\nMerge all entries from '${oldName}' into '${newName}'? Past timesheet entries with '${oldName}' will be reassigned. This can't be undone.`
+    : `Rename '${oldName}' to '${newName}'?\n\nThis will also update any past timesheet entries that used '${oldName}'.`;
+  if (!confirm(confirmMsg)) { renderJobManager(); return; }
+
+  if (!sheetUrl) { toast('Not connected to spreadsheet', 'err'); return; }
+
+  // Show a brief inline busy state
+  input.disabled = true;
+  toast('Renaming…', 'ok');
+
+  try {
+    // Fire-and-forget POST (iOS Safari pattern), then refresh list from server
+    await fetch(sheetUrl, {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'renameJob', oldName, newName })
+    });
+    // Give the server a moment, then re-fetch the authoritative job list
+    setTimeout(() => {
+      fetchJobsFromSheet().then(() => {
+        renderJobManager();
+        toast(merging ? '✓ Jobs merged' : '✓ Job renamed', 'ok');
+      });
+    }, 1200);
+  } catch (e) {
+    toast('Rename failed: ' + (e.message || 'unknown'), 'err');
+    renderJobManager();
+  }
+}
+
 function addJob() {
   const input = document.getElementById('newJobInput');
   const val = input.value.trim();
   if (!val) return toast('Enter a job name', 'err');
-  if (jobs.includes(val)) return toast('Already in list', 'err');
+  // Case-insensitive duplicate check
+  if (jobs.some(j => j.toLowerCase() === val.toLowerCase())) return toast('Already in list', 'err');
   jobs.push(val); saveJobs(); input.value = '';
   toast('✓ Job added', 'ok');
 }
-function removeJob(i) { jobs.splice(i,1); saveJobs(); }
+function removeJob(i) {
+  const name = jobs[i];
+  if (!confirm(`Delete '${name}' from the job list?\n\nPast timesheet entries for this job will remain in the data.`)) return;
+  jobs.splice(i,1); saveJobs();
+}
 function saveJobs() { localStorage.setItem('pph_jobs', JSON.stringify(jobs)); renderJobManager(); buildJobDropdown(); }
+
+// ─── FUZZY JOB MATCHING ──────────────────────────────────────────────
+// Returns the best existing job that might match what the user typed, or null.
+// Catches typos, case differences, and substring overlap.
+function findSimilarJob(typed) {
+  if (!typed) return null;
+  const t = typed.trim().toLowerCase();
+  if (!t) return null;
+
+  // Exact case-insensitive match wins outright
+  for (const j of jobs) {
+    if (j.toLowerCase() === t) return { job: j, reason: 'exact', score: 0 };
+  }
+
+  // Score each job: lower = better match
+  let best = null;
+  for (const j of jobs) {
+    const cand = j.toLowerCase();
+    let score = Infinity;
+    // Substring match (one contains the other)
+    if (cand.includes(t) || t.includes(cand)) {
+      score = Math.abs(cand.length - t.length);
+    } else {
+      // Levenshtein distance for typos. Cap input length to keep it cheap.
+      const dist = levenshtein(t, cand);
+      // Only consider it a match if distance is small relative to length
+      if (dist <= 2 || (dist / Math.max(t.length, cand.length)) < 0.25) {
+        score = dist + 10; // weight substring matches above edit-distance matches
+      }
+    }
+    if (score < Infinity && (!best || score < best.score)) {
+      best = { job: j, reason: score < 10 ? 'substring' : 'typo', score };
+    }
+  }
+  return best;
+}
+
+// Standard Levenshtein distance — small implementation good enough for short job names
+function levenshtein(a, b) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  let prev = new Array(b.length + 1);
+  for (let j = 0; j <= b.length; j++) prev[j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i-1] === b[j-1] ? 0 : 1;
+      cur[j] = Math.min(cur[j-1] + 1, prev[j] + 1, prev[j-1] + cost);
+    }
+    prev = cur;
+  }
+  return prev[b.length];
+}
 
 // ─── PAY TYPE ────────────────────────────────────────────────────────
 function updatePayTypeBadge() {
@@ -3242,16 +3380,35 @@ function onCalSourceRowClick(row) {
 // ─── SUBMIT ──────────────────────────────────────────────────────────
 async function submitEntry() {
   if (!empName) return toast('Please set up your profile first', 'err');
-  const job      = getSelectedJob();
+  let job        = getSelectedJob();
   const date     = document.getElementById('dateIn').value;
   const notes    = document.getElementById('notes').value.trim();
-  const payType  = getJobPayType(job);
   const workType = document.getElementById('workType').value;
   if (!job)      return toast('Select or enter a job', 'err');
   if (!workType) return toast('Select a work type', 'err');
   if (!date)     return toast('Pick a date', 'err');
   if (!calcHrs)  return toast('Slide to select hours worked', 'err');
 
+  // If the user wrote in a custom job, check whether it looks like an existing one.
+  // Catches typos ("hampton in" vs "Hampton Inn"), case differences ("hampton inn" vs "Hampton Inn"),
+  // and substring overlap. Lets the user pick "Use existing" so duplicates don't accumulate.
+  const sel = document.getElementById('jobSelect');
+  if (sel && sel.value === '__other__') {
+    const match = findSimilarJob(job);
+    if (match && match.job.toLowerCase() !== job.toLowerCase()) {
+      const useExisting = confirm(`Did you mean '${match.job}'?\n\nTap OK to use the existing job, or Cancel to use '${job}' as-is.`);
+      if (useExisting) {
+        job = match.job;
+        // Also update the visible field so it's clear what got submitted
+        document.getElementById('customJob').value = match.job;
+      }
+    } else if (match && match.job === job) {
+      // Exact case-insensitive match — silently canonicalize to the stored spelling
+      job = match.job;
+    }
+  }
+
+  const payType  = getJobPayType(job);
   const entry = { id: Date.now(), emp: empName, job, date, hrs: calcHrs, notes, payType, workType, synced: false };
   const bonusAmount = workType === 'After Hours Bonus' ? calcBonusAmount(calcHrs) : 0;
   setBusy(true);
