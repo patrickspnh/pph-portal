@@ -1489,7 +1489,9 @@ function saveJobs() { localStorage.setItem('pph_jobs', JSON.stringify(jobs)); re
 
 // ─── FUZZY JOB MATCHING ──────────────────────────────────────────────
 // Returns the best existing job that might match what the user typed, or null.
-// Catches typos, case differences, and substring overlap.
+// Catches typos, case differences, substring overlap, AND token overlap
+// (handles cases like "Stacy gibson" matching "Staci Gibson-Cabin" where most
+// words are shared but the full strings are quite different).
 function findSimilarJob(typed) {
   if (!typed) return null;
   const t = typed.trim().toLowerCase();
@@ -1500,27 +1502,70 @@ function findSimilarJob(typed) {
     if (j.toLowerCase() === t) return { job: j, reason: 'exact', score: 0 };
   }
 
-  // Score each job: lower = better match
+  // Tokenize the typed input — words 2+ chars long, ignoring punctuation
+  const typedTokens = tokenize(t);
+
+  // Score each existing job; lower score = better match
   let best = null;
   for (const j of jobs) {
     const cand = j.toLowerCase();
     let score = Infinity;
+    let reason = '';
+
     // Substring match (one contains the other)
     if (cand.includes(t) || t.includes(cand)) {
       score = Math.abs(cand.length - t.length);
+      reason = 'substring';
     } else {
-      // Levenshtein distance for typos. Cap input length to keep it cheap.
+      // Levenshtein distance for typos (works for short, similar strings)
       const dist = levenshtein(t, cand);
-      // Only consider it a match if distance is small relative to length
       if (dist <= 2 || (dist / Math.max(t.length, cand.length)) < 0.25) {
-        score = dist + 10; // weight substring matches above edit-distance matches
+        score = dist + 10;
+        reason = 'typo';
+      }
+      // Token overlap — catches "stacy gibson" vs "staci gibson-cabin"
+      // (most word-stems match even though the full strings differ)
+      const candTokens = tokenize(cand);
+      if (typedTokens.length && candTokens.length) {
+        let matchedTokens = 0;
+        typedTokens.forEach(tt => {
+          // Match a typed token if any candidate token starts with it,
+          // it starts with any candidate token, or they're within 1 edit
+          for (const ct of candTokens) {
+            if (ct === tt || ct.startsWith(tt) || tt.startsWith(ct) || levenshtein(tt, ct) <= 1) {
+              matchedTokens++;
+              break;
+            }
+          }
+        });
+        // If at least 2 tokens match (or 100% of tokens for single-word inputs)
+        const ratio = matchedTokens / typedTokens.length;
+        if (matchedTokens >= 2 || (typedTokens.length === 1 && ratio === 1)) {
+          // Token-overlap score: prioritize jobs that share more tokens
+          const tokenScore = 5 + (typedTokens.length - matchedTokens) + Math.abs(candTokens.length - typedTokens.length);
+          if (tokenScore < score) {
+            score = tokenScore;
+            reason = 'tokens';
+          }
+        }
       }
     }
+
     if (score < Infinity && (!best || score < best.score)) {
-      best = { job: j, reason: score < 10 ? 'substring' : 'typo', score };
+      best = { job: j, reason, score };
     }
   }
   return best;
+}
+
+// Tokenize a job name: split on whitespace and punctuation, keep words of 2+ chars,
+// drop common filler words that confuse matching.
+function tokenize(s) {
+  const stopwords = new Set(['the', 'and', 'or', 'of', 'at', 'in', 'on', 'for', 'to', 'a']);
+  return String(s).toLowerCase()
+    .split(/[\s\-_,.;:/\\()&]+/)
+    .map(w => w.trim())
+    .filter(w => w.length >= 2 && !stopwords.has(w));
 }
 
 // Standard Levenshtein distance — small implementation good enough for short job names
